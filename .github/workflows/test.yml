@@ -1,0 +1,39 @@
+name: Test
+on:
+  push:
+    branches:
+    - main
+    - feature/datasets
+  pull_request:
+    branches:
+    - main
+    - feature/datasets
+jobs:
+  test:
+    name: ${{ matrix.lang }} tests on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+        lang: [Python]
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Set up Python 3.9
+      uses: actions/setup-python@v2
+      with:
+        python-version: '3.9'
+
+    - name: Install Python 3.x dependencies
+      run: |
+        pip install --upgrade pip
+        pip install poetry
+        poetry install -E metaflow
+    - name: Python Code Format Check
+      run: |
+        poetry run black datasets
+        poetry run flake8 datasets
+
+    - name: Execute Python tests
+      run: poetry run pytest datasets
