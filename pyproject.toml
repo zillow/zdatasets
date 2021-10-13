@@ -11,14 +11,15 @@ classifiers = [
   "Programming Language :: Python :: 3.8",
   "Programming Language :: Python :: 3.7"
 ]
-authors = ["Zillow AI Platform"]
-readme = "README.rst"
+authors = ["Taleb Zeghmi"]
+readme = "README.md"
 
 [tool.poetry.dependencies]
 python = ">=3.7,<4"
 pandas = "^1.1.0"
 pyarrow = "^5.0.0"
 dask = "^2021.9.1"
+zillow-metaflow = { git = "https://github.com/zillow/metaflow.git", branch = "feature/kfp" }
 
 [tool.poetry.dev-dependencies]
 mypy = "^0.910"
@@ -34,7 +35,7 @@ pyspark = "^3.1.2"
 
 [tool.poetry.extras]
 doc = ["sphinx", "sphinx_rtd_theme"]
-metaflow = ["metaflow"]
+metaflow = ["zillow-metaflow"]
 
 [tool.isort]
 known_first_party = 'datasets'

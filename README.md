@@ -1,20 +1,14 @@
-.. image:: https://travis-ci.org/zillow/zdatasets.svg?branch=master
-    :target: https://travis-ci.org/zillow/zdatasets
+![Tests](https://github.com/zillow/datasets/actions/workflows/test.yml/badge.svg)
 
-.. image:: https://coveralls.io/repos/github/zillow/zdatasets/badge.svg?branch=master
-    :target: https://coveralls.io/github/zillow/zdatasets?branch=master
-
-.. image:: https://readthedocs.org/projects/zdatasets/badge/?version=latest
-    :target: https://zdatasets.readthedocs.io/en/latest/?badge=latest
-    :alt: Documentation Status
+TODO: code coverage and doc badge
 
 
-Welcome to datasets
+Welcome to @datasets
 ==================================================
 
 TODO
 
-.. code-block:: python
+```python
     import pandas as pd
     from metaflow import FlowSpec, step
 
@@ -45,3 +39,4 @@ TODO
 
     if __name__ == "__main__":
         HelloDatasetFlow()
+```
