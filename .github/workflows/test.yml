@@ -28,7 +28,7 @@ jobs:
     - name: Install Python 3.x dependencies
       run: |
         pip install --upgrade pip
-        pip install poetry
+        pip install poetry coveragepy-lcov
         poetry install -E metaflow
     - name: Python Code Format Check
       run: |
@@ -36,10 +36,12 @@ jobs:
         poetry run flake8 datasets
 
     - name: Execute Python tests
-      run: poetry run pytest datasets
+      run: |
+        poetry run pytest datasets
+        coveragepy-lcov
 
     - name: Publish to coveralls.io
       uses: coverallsapp/github-action@master
       with:
         github-token: ${{ secrets.GITHUB_TOKEN }}
-        path-to-lcov: coverage.xml
+        path-to-lcov: lcov.info
