@@ -851,8 +851,8 @@ requests = "*"
 [package.source]
 type = "git"
 url = "https://github.com/zillow/metaflow.git"
-reference = "feature/kfp"
-resolved_reference = "9a57e7fbccb4dd787f410069b732faa96d8ce323"
+reference = "tz/coverage"
+resolved_reference = "e7c74c470f7b8e62fe5cec8c2ba603ece3a3d832"
 
 [[package]]
 name = "zipp"
@@ -873,7 +873,7 @@ metaflow = ["zillow-metaflow"]
 [metadata]
 lock-version = "1.1"
 python-versions = ">=3.7,<4"
-content-hash = "aaa014bb53d17c2b8b6eb40f10d532b742bc1326272f80cc7c02c6cc827c9bb4"
+content-hash = "0b29c08f54af0c3908e10fef81477b33da40ff659e6083db437ae451bc4ed9f1"
 
 [metadata.files]
 "aspy.refactor-imports" = [

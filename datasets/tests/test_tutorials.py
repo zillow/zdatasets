@@ -25,6 +25,8 @@ def test_foreach_flow():
 
 
 def run_flow(flow_py):
+    os.environ["METAFLOW_COVERAGE_SOURCE"] = "tutorial,datasets"
+    os.environ["METAFLOW_COVERAGE_OMIT"] = "metaflow"
     os.environ["METAFLOW_USER"] = "compile_only_user"
     base_dir = dirname(dirname(realpath(__file__)))
     file_name = os.path.join(base_dir, flow_py)
@@ -35,6 +37,6 @@ def run_flow(flow_py):
         "--no-pylint",
         "run",
     ]
-    process = run(cmd, stdout=PIPE, stderr=STDOUT, encoding="utf8", cwd=base_dir)
+    process = run(cmd, stdout=PIPE, stderr=STDOUT, encoding="utf8")
     print(process.stdout)
     assert process.returncode == 0, process.stdout

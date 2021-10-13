@@ -1,4 +1,5 @@
 ![Tests](https://github.com/zillow/datasets/actions/workflows/test.yml/badge.svg)
+[![Coverage Status](https://coveralls.io/repos/github/zillow/datasets/badge.svg)](https://coveralls.io/github/zillow/datasets)
 
 TODO: code coverage and doc badge
 
