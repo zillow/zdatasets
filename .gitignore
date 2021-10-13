@@ -77,6 +77,7 @@ coverage/
 nosetests.xml
 coverage.xml
 log/
+lcov.info
 
 .metaflow
 
