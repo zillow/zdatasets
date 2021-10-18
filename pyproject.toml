@@ -14,12 +14,22 @@ classifiers = [
 authors = ["Taleb Zeghmi"]
 readme = "README.md"
 
+[tool.poetry.plugins]
+[tool.poetry.plugins."datasets.plugins"]
+offline_dataset = "datasets.plugins:OfflineDataset"
+offline_flow_dataset = "datasets.plugins:OfflineFlowDataset"
+
+[tool.poetry.plugins."datasets.executors"]
+metaflow_executor = "datasets.plugins:MetaflowExecutor"
+
 [tool.poetry.dependencies]
 python = ">=3.7,<4"
 pandas = "^1.1.0"
 pyarrow = "^5.0.0"
 dask = "^2021.9.1"
 zillow-metaflow = { git = "https://github.com/zillow/metaflow.git", branch = "tz/coverage" }
+pyspark = "^3.0.0"
+importlib-metadata = "^4.8.1"
 
 [tool.poetry.dev-dependencies]
 mypy = "^0.910"
@@ -31,11 +41,12 @@ pytest-cov = "^2.12.1"
 seed-isort-config = "^2.2"
 pre-commit = "^2.15"
 pytest-depends = "^1.0.1"
-pyspark = "^3.1.2"
 
 [tool.poetry.extras]
 doc = ["sphinx", "sphinx_rtd_theme"]
 metaflow = ["zillow-metaflow"]
+dask = ["dask"]
+spark = ["spark"]
 
 [tool.isort]
 known_first_party = 'datasets'

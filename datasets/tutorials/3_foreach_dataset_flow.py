@@ -3,8 +3,7 @@ import os
 import pandas as pd  # type: ignore
 from metaflow import FlowSpec, step
 
-from datasets.datasets_decorator import datasets
-from datasets.mode import Mode
+from datasets import Mode, datasets
 
 
 flow_dir = os.path.dirname(os.path.realpath(__file__))

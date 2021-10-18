@@ -1,8 +1,7 @@
 import pandas as pd
 from metaflow import FlowSpec, step
 
-from datasets.datasets_decorator import datasets
-from datasets.mode import Mode
+from datasets import Mode, datasets
 
 
 class HelloDatasetFlow(FlowSpec):

@@ -15,6 +15,7 @@ def test_input_output_flow():
     run_flow("tutorials/1_input_output_flow.py")
 
 
+@pytest.mark.spark
 @pytest.mark.depends(on=["test_input_output_flow"])
 def test_dask_spark_flow():
     run_flow("tutorials/2_spark_dask_flow.py")
