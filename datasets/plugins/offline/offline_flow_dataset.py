@@ -1,6 +1,8 @@
+from datasets.dataset import Dataset
 from datasets.plugins import OfflineDataset
 
 
+@Dataset.register_plugin(constructor_keys={"flow_dataset"})
 class OfflineFlowDataset(OfflineDataset):
     def __init__(
         self,

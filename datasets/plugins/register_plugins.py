@@ -1,21 +1,18 @@
 from datasets.dataset import Dataset
-from datasets.plugins import (
-    MetaflowExecutor,
-    OfflineDataset,
-    OfflineFlowDataset,
-)
+from datasets.plugins import MetaflowExecutor
 
 
 def register():
     from importlib_metadata import entry_points
-    for entry in entry_points(group='datasets.plugins'):
-        entry.load()
-
-    entry_points(group='datasets.executors')
 
     # Register plugins
-    Dataset.register_plugin(OfflineDataset, constructor_keys={"name"})
-    Dataset.register_plugin(OfflineFlowDataset, constructor_keys={"flow_dataset"})
+    for entry in entry_points(group="datasets.plugins"):
+        entry.load()
 
-    # Register executors
+    # Register default executor first
     Dataset.register_executor(executor=MetaflowExecutor())
+
+    for entry in entry_points(group="datasets.executors"):
+        executor = entry.load()
+        if not isinstance(executor, type(MetaflowExecutor)):
+            Dataset.register_executor(executor=executor)

@@ -50,16 +50,18 @@ class Dataset(ABC):
         return cls._plugins[max_plugin_lookup](**kwargs)
 
     @classmethod
-    def register_plugin(
-        cls, plugin: Dataset, constructor_keys: set[str] = None, context: str = "offline"
-    ) -> Callable:
+    def register_plugin(cls, constructor_keys: set[str] = None, context: str = "offline") -> Callable:
         if constructor_keys is None:
             raise ValueError("constructor_keys cannot be None!")
 
-        plugin_lookup = ",".join({context}.union(constructor_keys))
-        if plugin_lookup in cls._plugins:
-            raise ValueError(f"{constructor_keys} already registered as a dataset plugin!")
-        cls._plugins[plugin_lookup] = plugin
+        def inner_wrapper(wrapped_class: Dataset) -> Dataset:
+            plugin_lookup = ",".join({context}.union(constructor_keys))
+            if plugin_lookup in cls._plugins:
+                raise ValueError(f"{constructor_keys} already registered as a dataset plugin!")
+            cls._plugins[plugin_lookup] = wrapped_class
+            return wrapped_class
+
+        return inner_wrapper
 
     @classmethod
     def register_executor(cls, executor: ProgramExecutor = None):

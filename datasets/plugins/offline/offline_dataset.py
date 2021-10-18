@@ -17,6 +17,7 @@ class InvalidOperationException(Exception):
     pass
 
 
+@Dataset.register_plugin(constructor_keys={"name"})
 class OfflineDataset(Dataset):
     _dataset_path_func: callable = None
 

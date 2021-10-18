@@ -25,6 +25,11 @@ def test_foreach_flow():
     run_flow("tutorials/3_foreach_dataset_flow.py")
 
 
+@pytest.mark.depends(on=["test_foreach_flow"])
+def test_hello_plugin_flow():
+    run_flow("tutorials/4_hello_plugin_flow.py")
+
+
 def run_flow(flow_py):
     os.environ["METAFLOW_COVERAGE_SOURCE"] = "tutorial,datasets"
     os.environ["METAFLOW_COVERAGE_OMIT"] = "metaflow"
