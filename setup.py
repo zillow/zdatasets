@@ -3,7 +3,11 @@ from setuptools import setup
 
 
 # File used to allow install from a branch
-# ex: pip3 install --user --upgrade git+https://github.com/zillow/datasets.git@tz/plugins#egg=zdatasets
+# ex: !pip3 install --upgrade git+https://github.com/zillow/datasets.git@tz/plugins
+
+# To create this file
+# poetry build --format sdist
+# tar -xvf dist/*-`poetry version -s`.tar.gz -O '*/setup.py' > setup.py
 
 
 packages = [
@@ -17,11 +21,11 @@ install_requires = [
     "importlib-metadata>=4.8.1,<5.0.0",
     "pandas>=1.1.0,<2.0.0",
     "pyarrow>=5.0.0,<6.0.0",
-    "pyspark>=3.0.0,<4.0.0",
 ]
 
 extras_require = {
     ':extra == "dask"': ["dask>=2021.9.1,<2022.0.0"],
+    ':extra == "spark"': ["pyspark>=3.0.0,<4.0.0"],
     ':extra == "metaflow"': ["zillow-metaflow @ " "git+https://github.com/zillow/metaflow.git@tz/coverage"],
 }
 
