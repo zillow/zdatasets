@@ -4,6 +4,7 @@ on:
     branches:
     - main
     - feature/datasets
+    - tz/pypi
   pull_request:
     branches:
     - main
