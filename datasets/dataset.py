@@ -66,6 +66,8 @@ class Dataset(ABC):
         ProgramExecutor.context == plugin.context
         and that plugin.constructor_keys.issubset(dataset_arguments)
 
+        constructor_keys="name" is a special case and is loaded last if no other plugins are found
+
         :param constructor_keys: set of dataset constructor keys
         :param context: defaults to offline, but is the context this plugin supports
         :return: decorated class
