@@ -15,14 +15,14 @@ class Dataset(ABC):
     def __init__(
         self,
         name: str = None,
-        key: str = None,
+        logical_key: str = None,
         columns=None,
-        run_id=None,
+        run_id: str = None,
         mode: Mode = Mode.Read,
         attribute_name: str = None,
     ):
         self.name = name
-        self.key = key
+        self.key = logical_key
         self.mode = mode
         self.columns = columns
         self.run_id = run_id
@@ -33,29 +33,48 @@ class Dataset(ABC):
 
     @classmethod
     def from_keys(cls, **kwargs) -> Dataset:
-        constructor_keys = set(kwargs.keys())
+        """
+        This is the factory method for datasets.
+        :param kwargs: dataset constructor args
+        :return: found Dataset
+        """
+        dataset_args = set(kwargs.keys())
 
-        max_plugin_lookup = None
-        max_fix = 0
-        for plugin_lookup in cls._plugins.keys():
-            plugin_keys = set(plugin_lookup.split(","))
+        default_name_plugin = None
+        for plugin_lookup in (p for p in cls._plugins.keys() if cls._executor.context in p):
+            plugin_keys: set[str] = set(plugin_lookup.split(","))
 
-            if cls._executor.context in plugin_keys:
-                fit = len(constructor_keys.intersection(plugin_keys))
+            plugin_keys_only = plugin_keys.difference({cls._executor.context})
+            if plugin_keys_only.issubset(dataset_args):
+                if plugin_keys_only == {"name"}:
+                    default_name_plugin = plugin_lookup
+                else:
+                    return cls._plugins[plugin_lookup](**kwargs)
 
-                if fit >= max_fix:
-                    max_plugin_lookup = plugin_lookup
-                max_fix = fit
-
-        return cls._plugins[max_plugin_lookup](**kwargs)
+        if default_name_plugin:
+            return cls._plugins[default_name_plugin](**kwargs)
+        else:
+            raise ValueError(f"f{kwargs} not found in {cls._plugins}")
 
     @classmethod
-    def register_plugin(cls, constructor_keys: set[str] = None, context: str = "offline") -> Callable:
+    def register_plugin(cls, constructor_keys: set[str], context: str = "offline") -> Callable:
+        """
+        Registration method for a dataset plugin.
+        Plugins area looked up by (constructor_keys, context), so no two can be registered at the same time.
+
+        Plugins are constructed by from_keys(), by ensuring that the current
+        ProgramExecutor.context == plugin.context
+        and that plugin.constructor_keys.issubset(dataset_arguments)
+
+        :param constructor_keys: set of dataset constructor keys
+        :param context: defaults to offline, but is the context this plugin supports
+        :return: decorated class
+        """
         if constructor_keys is None:
             raise ValueError("constructor_keys cannot be None!")
 
         def inner_wrapper(wrapped_class: Dataset) -> Dataset:
-            plugin_lookup = ",".join({context}.union(constructor_keys))
+            plugin_lookup = ",".join(constructor_keys.union({context}))  # KEY for plugin factory
             if plugin_lookup in cls._plugins:
                 raise ValueError(f"{constructor_keys} already registered as a dataset plugin!")
             cls._plugins[plugin_lookup] = wrapped_class

@@ -24,7 +24,7 @@ class OfflineFlowDataset(OfflineDataset):
 
         super(OfflineFlowDataset, self).__init__(
             name=self.dataset_name,
-            key=dataset.key,
+            logical_key=dataset.key,
             columns=columns,
             run_id=run_id,
             attribute_name=name if name else self.dataset_name,

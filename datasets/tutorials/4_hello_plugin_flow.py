@@ -27,14 +27,19 @@ class KVDataset(Dataset):
     def __init__(
         self,
         name: str = None,
-        key: str = None,
+        logical_key: str = None,
         columns=None,
         run_id=None,
         mode: Mode = Mode.Read,
         attribute_name: str = None,
     ):
         super(KVDataset, self).__init__(
-            name=name, key=key, columns=columns, run_id=run_id, mode=mode, attribute_name=attribute_name
+            name=name,
+            logical_key=logical_key,
+            columns=columns,
+            run_id=run_id,
+            mode=mode,
+            attribute_name=attribute_name,
         )
 
     def read(self, key):
@@ -42,6 +47,9 @@ class KVDataset(Dataset):
 
 
 class HelloPluginFlow(FlowSpec):
+    # FUTURE:
+    # hello_dataset = Parameter("hello_dataset", type=dataset(columns="col1"))
+
     @datasets.dataset(name="hello_dataset")
     @step
     def start(self):

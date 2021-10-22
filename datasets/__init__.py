@@ -4,4 +4,4 @@ from datasets.dataset import Dataset as dataset
 from datasets.datasets_decorator import datasets
 from datasets.mode import Mode
 
-from datasets import plugins  # TODO: better way to load the plugins
+from datasets import plugins

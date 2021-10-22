@@ -3,7 +3,7 @@ from datasets.dataset import ProgramExecutor
 
 class MetaflowExecutor(ProgramExecutor):
     @property
-    def run_id(self) -> str:
+    def current_run_id(self) -> str:
         from metaflow import current
 
         return current.run_id
@@ -17,7 +17,7 @@ class MetaflowExecutor(ProgramExecutor):
         return datastore.get_datastore_root_from_config(print)
 
     @property
-    def program_name(self) -> str:
+    def current_program_name(self) -> str:
         from metaflow import current
 
         return current.flow_name

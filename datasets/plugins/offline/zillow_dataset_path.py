@@ -4,7 +4,7 @@ from pathlib import Path
 from datasets.plugins import OfflineDataset
 
 
-def _get_dataset_path(dataset: OfflineDataset) -> str:
+def _get_offline_dataset_path(dataset: OfflineDataset) -> str:
     path = Path(dataset._executor.datastore_path) / "datastore"
 
     zodiac_service = os.environ.get("ZODIAC_SERVICE", None)

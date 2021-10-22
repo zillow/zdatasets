@@ -24,7 +24,7 @@ class OfflineDataset(Dataset):
     def __init__(
         self,
         name: str,
-        key: str = None,
+        logical_key: str = None,
         columns=None,
         run_id=None,
         mode: Mode = Mode.Read,
@@ -35,7 +35,12 @@ class OfflineDataset(Dataset):
         self.path = path
         self.partition_by = partition_by
         super(OfflineDataset, self).__init__(
-            name=name, key=key, columns=columns, run_id=run_id, mode=mode, attribute_name=attribute_name
+            name=name,
+            logical_key=logical_key,
+            columns=columns,
+            run_id=run_id,
+            mode=mode,
+            attribute_name=attribute_name,
         )
 
     def _get_path_filters_columns(self, columns) -> Tuple[str, list, list[str]]:
@@ -75,11 +80,11 @@ class OfflineDataset(Dataset):
             if "run_id" not in partition_cols:
                 partition_cols.append("run_id")
             if self.run_id is None:
-                self.run_id = self._executor.run_id
+                self.run_id = self._executor.current_run_id
             data["run_id"] = self.run_id
 
         if not self.program_name:
-            self.program_name = self._executor.program_name
+            self.program_name = self._executor.current_program_name
 
         data.to_parquet(
             self._get_dataset_path(),

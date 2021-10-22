@@ -1,5 +1,4 @@
 import os
-import uuid
 
 import pandas as pd
 import pytest
@@ -10,31 +9,6 @@ from datasets.plugins.offline.offline_dataset import (
     InvalidOperationException,
     OfflineDataset,
 )
-from datasets.program_executor import ProgramExecutor
-
-
-_run_id = str(uuid.uuid1())
-
-
-class TestExecutor(ProgramExecutor):
-    @property
-    def run_id(self) -> str:
-        return _run_id
-
-    @property
-    def datastore_path(self) -> str:
-        return os.path.join(os.path.dirname(os.path.realpath(__file__)), "data")
-
-    @property
-    def program_name(self) -> str:
-        return "my_program"
-
-    @property
-    def context(self) -> str:
-        return "offline"
-
-
-Dataset.register_executor(executor=TestExecutor())
 
 
 ds1_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "data/ds1")
@@ -62,7 +36,7 @@ def name():
 
 @pytest.fixture
 def dataset(name, path, partition_by, mode):
-    return Dataset.from_keys(name=name, key="my_key", path=path, partition_by=partition_by, mode=mode)
+    return Dataset.from_keys(name=name, logical_key="my_key", path=path, partition_by=partition_by, mode=mode)
 
 
 @pytest.fixture
@@ -107,11 +81,13 @@ def test_write_on_read_only(dataset: OfflineDataset):
 @pytest.mark.parametrize("path", [None])
 def test_zillow_dataset_path_plugin(dataset: OfflineDataset, df: pd.DataFrame):
     # import registers it!
-    from datasets.plugins.zillow.zillow_dataset_path import _get_dataset_path
+    from datasets.plugins.offline.zillow_dataset_path import (
+        _get_offline_dataset_path,
+    )
 
     dataset.write(df.copy())
 
-    OfflineDataset._register_dataset_path_func(_get_dataset_path)
+    OfflineDataset._register_dataset_path_func(_get_offline_dataset_path)
     path = dataset._get_dataset_path()
     assert path.endswith("datasets/tests/data/datastore/my_program/ds1")
 

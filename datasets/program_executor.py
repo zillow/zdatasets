@@ -3,7 +3,7 @@ from abc import ABC
 
 class ProgramExecutor(ABC):
     @property
-    def run_id(self) -> str:
+    def current_run_id(self) -> str:
         pass
 
     @property
@@ -11,9 +11,12 @@ class ProgramExecutor(ABC):
         pass
 
     @property
-    def program_name(self) -> str:
+    def current_program_name(self) -> str:
         pass
 
     @property
     def context(self) -> str:
+        """
+        execution context: offline, streaming, online
+        """
         pass
