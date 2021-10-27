@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "datasets"
+name = "zdatasets"
 version = "0.0.1"
 description = "Dataset SDK for consistent read/write [offline, online, streaming] data for ML Programs."
 classifiers = [
@@ -13,6 +13,9 @@ classifiers = [
 ]
 authors = ["Taleb Zeghmi"]
 readme = "README.md"
+
+[[tool.poetry.packages]]
+include = "datasets"
 
 # https://packaging.python.org/guides/creating-and-discovering-plugins/
 [tool.poetry.plugins]
@@ -28,7 +31,6 @@ python = ">=3.7,<4"
 pandas = "^1.1.0"
 pyarrow = "^5.0.0"
 dask = { version = "^2021.9.1", optional = true }
-zillow-metaflow = { git = "https://github.com/zillow/metaflow.git", branch = "tz/coverage", optional = true}
 pyspark = { version = "^3.0.0", optional = true }
 importlib-metadata = "^4.8.1"
 

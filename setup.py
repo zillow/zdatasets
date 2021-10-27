@@ -38,7 +38,7 @@ entry_points = {
 }
 
 setup_kwargs = {
-    "name": "datasets",
+    "name": "zdatasets",
     "version": "0.0.1",
     "description": "Dataset SDK for consistent read/write [offline, online, streaming] data for ML Programs.",
     "author": "Taleb Zeghmi",
