@@ -1,24 +1,25 @@
 import pandas as pd
 from metaflow import FlowSpec, step
 
-from datasets import Mode, datasets
-from datasets.dataset import Dataset
+from datasets import Mode, dataset
+from datasets.context import Context
+from datasets.dataset_plugin import DatasetPlugin
 from datasets.plugins import MetaflowExecutor
 
 
 # An online executor context!
 class OnlineExecutor(MetaflowExecutor):
     @property
-    def context(self) -> str:
-        return "online"
+    def context(self) -> Context:
+        return Context.Online
 
 
-Dataset.register_executor(executor=OnlineExecutor())
+DatasetPlugin.register_executor(executor=OnlineExecutor())
 
 
 # The default online plugin!
-@Dataset.register_plugin(constructor_keys={"name"}, context="online")
-class KVDataset(Dataset):
+@DatasetPlugin.register_plugin(constructor_keys={"name"}, context=Context.Online)
+class KVDatasetPlugin(DatasetPlugin):
     db = pd.DataFrame(
         {"key": ["first", "second", "third", "fourth"], "value": [1, 2, 3, 4]},
     )
@@ -33,7 +34,7 @@ class KVDataset(Dataset):
         mode: Mode = Mode.Read,
         attribute_name: str = None,
     ):
-        super(KVDataset, self).__init__(
+        super(KVDatasetPlugin, self).__init__(
             name=name,
             logical_key=logical_key,
             columns=columns,
@@ -50,7 +51,7 @@ class HelloPluginFlow(FlowSpec):
     # FUTURE:
     # hello_dataset = Parameter("hello_dataset", type=dataset(columns="col1"))
 
-    @datasets.dataset(name="hello_dataset")
+    @dataset(name="hello_dataset")
     @step
     def start(self):
         df: pd.DataFrame = self.hello_dataset.read(["first", "third"])

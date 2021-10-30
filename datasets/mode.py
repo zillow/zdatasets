@@ -1,6 +1,10 @@
-from enum import Enum
+from enum import Flag, auto
 
 
-class Mode(Enum):
-    Read = 1
-    Write = 2
+class Mode(Flag):
+    """
+    Used to represent data access modes.
+    """
+
+    Read = auto()
+    Write = auto()

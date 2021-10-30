@@ -1,4 +1,5 @@
-from datasets.dataset import ProgramExecutor
+from datasets.context import Context
+from datasets.dataset_plugin import ProgramExecutor
 
 
 class MetaflowExecutor(ProgramExecutor):
@@ -23,5 +24,5 @@ class MetaflowExecutor(ProgramExecutor):
         return current.flow_name
 
     @property
-    def context(self) -> str:
-        return "offline"
+    def context(self) -> Context:
+        return Context.Batch

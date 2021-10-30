@@ -1,11 +1,12 @@
 from pathlib import Path
-from typing import TYPE_CHECKING, Tuple
+from typing import TYPE_CHECKING, Optional, Tuple
 
 import pandas
 import pandas as pd
 
 from datasets import Mode
-from datasets.dataset import Dataset
+from datasets.context import Context
+from datasets.dataset_plugin import DatasetPlugin
 
 
 if TYPE_CHECKING:
@@ -17,8 +18,12 @@ class InvalidOperationException(Exception):
     pass
 
 
-@Dataset.register_plugin(constructor_keys={"name"})
-class OfflineDataset(Dataset):
+@DatasetPlugin.register_plugin(constructor_keys={"name"}, context=Context.Batch)
+class BatchDatasetPlugin(DatasetPlugin):
+    """
+    This is the default plugin for the Batch execution context.
+    """
+
     _dataset_path_func: callable = None
 
     def __init__(
@@ -28,13 +33,14 @@ class OfflineDataset(Dataset):
         columns=None,
         run_id=None,
         mode: Mode = Mode.Read,
-        path: str = None,
-        partition_by: str = None,
-        attribute_name: str = None,
+        path: Optional[str] = None,
+        partition_by: Optional[str] = None,
+        attribute_name: Optional[str] = None,
     ):
         self.path = path
         self.partition_by = partition_by
-        super(OfflineDataset, self).__init__(
+        self.program_name = self._executor.current_program_name
+        super(BatchDatasetPlugin, self).__init__(
             name=name,
             logical_key=logical_key,
             columns=columns,
@@ -43,19 +49,29 @@ class OfflineDataset(Dataset):
             attribute_name=attribute_name,
         )
 
-    def _get_path_filters_columns(self, columns) -> Tuple[str, list, list[str]]:
+    def _get_path_filters_columns(self, columns, run_id: Optional[str] = None) -> Tuple[str, list, list[str]]:
         path = self._get_dataset_path()
         read_columns = self._get_read_columns(columns)
         filters = None
-        if self.run_id:
-            filters = [("run_id", "=", self.run_id)]
+        query_run_id = run_id if run_id else self.run_id
+        if query_run_id:
+            filters = [("run_id", "=", query_run_id)]
         return path, filters, read_columns
 
-    def read_pandas(self, columns: str = None, **kwargs) -> pd.DataFrame:
-        path, filters, read_columns = self._get_path_filters_columns(columns)
-        df: pd.DataFrame = pandas.read_parquet(
-            path, columns=read_columns, engine="pyarrow", filters=filters, **kwargs
-        )
+    def read_pandas(
+        self,
+        columns: Optional[str] = None,
+        storage_format: str = "parquet",
+        run_id: Optional[str] = None,
+        **kwargs,
+    ) -> pd.DataFrame:
+        path, filters, read_columns = self._get_path_filters_columns(columns, run_id=run_id)
+
+        df: pd.DataFrame
+        if storage_format == "parquet":
+            df = pandas.read_parquet(path, columns=read_columns, engine="pyarrow", filters=filters, **kwargs)
+        elif storage_format == "csv":
+            df = pandas.read_csv(path, columns=read_columns, filters=filters, **kwargs)
 
         for meta_column in self._META_COLUMNS:
             if meta_column in df and (read_columns is None or meta_column not in read_columns):
@@ -63,7 +79,7 @@ class OfflineDataset(Dataset):
         return df
 
     def write(self, data: pd.DataFrame, **kwargs):
-        if not self.mode == Mode.Write:
+        if not (self.mode & Mode.Write):
             raise InvalidOperationException(f"Cannot write because mode={self.mode}")
 
         if not isinstance(data, pd.DataFrame):
@@ -83,9 +99,6 @@ class OfflineDataset(Dataset):
                 self.run_id = self._executor.current_run_id
             data["run_id"] = self.run_id
 
-        if not self.program_name:
-            self.program_name = self._executor.current_program_name
-
         data.to_parquet(
             self._get_dataset_path(),
             engine="pyarrow",
@@ -95,11 +108,12 @@ class OfflineDataset(Dataset):
             **kwargs,
         )
 
-    def read_dask(self, columns=None, **kwargs) -> "dd.DataFrame":
+    def read_dask(
+        self, columns: Optional[str] = None, run_id: Optional[str] = None, **kwargs
+    ) -> "dd.DataFrame":
         import dask.dataframe as dd
 
-        path, filters, read_columns = self._get_path_filters_columns(columns)
-        print(f"{filters=}")
+        path, filters, read_columns = self._get_path_filters_columns(columns, run_id=run_id)
         return dd.read_parquet(
             path,
             columns=read_columns,
@@ -108,11 +122,13 @@ class OfflineDataset(Dataset):
             **kwargs,
         )
 
-    def read_spark(self, columns=None, conf=None, **kwargs) -> "pyspark.sql.DataFrame":
+    def read_spark(
+        self, columns: Optional[str] = None, run_id: Optional[str] = None, conf=None, **kwargs
+    ) -> "pyspark.sql.DataFrame":
         from pyspark import SparkConf
         from pyspark.sql import DataFrame, SparkSession
 
-        path, _, read_columns = self._get_path_filters_columns(columns)
+        path, _, read_columns = self._get_path_filters_columns(columns, run_id=run_id)
 
         read_columns = read_columns if read_columns else ["*"]
         if self.run_id:
@@ -135,10 +151,15 @@ class OfflineDataset(Dataset):
         if self.path is not None:
             return self.path
         else:
-            if OfflineDataset._dataset_path_func:
-                return OfflineDataset._dataset_path_func(self)
+            if BatchDatasetPlugin._dataset_path_func:
+                return BatchDatasetPlugin._dataset_path_func(self)
             else:
-                return str(Path(self._executor.datastore_path) / "datastore" / self.program_name / self.name)
+                return str(
+                    Path(self._executor.datastore_path)
+                    / "datastore"
+                    / (self.program_name if self.program_name else self._executor.current_program_name)
+                    / self.name
+                )
 
     def __str__(self):
         return self.__repr__()

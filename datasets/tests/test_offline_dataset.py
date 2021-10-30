@@ -4,10 +4,11 @@ import pandas as pd
 import pytest
 
 from datasets import Mode
-from datasets.dataset import Dataset
-from datasets.plugins.offline.offline_dataset import (
+from datasets.context import Context
+from datasets.dataset_plugin import DatasetPlugin
+from datasets.plugins.batch.batch_dataset_plugin import (
+    BatchDatasetPlugin,
     InvalidOperationException,
-    OfflineDataset,
 )
 
 
@@ -36,7 +37,14 @@ def name():
 
 @pytest.fixture
 def dataset(name, path, partition_by, mode):
-    return Dataset.from_keys(name=name, logical_key="my_key", path=path, partition_by=partition_by, mode=mode)
+    return DatasetPlugin.from_keys(
+        context=Context.Batch,
+        name=name,
+        logical_key="my_key",
+        path=path,
+        partition_by=partition_by,
+        mode=mode,
+    )
 
 
 @pytest.fixture
@@ -44,50 +52,50 @@ def df():
     return pd.DataFrame({"col1": ["A", "A", "A", "B", "B", "B"], "col2": [1, 2, 3, 4, 5, 6]})
 
 
-def test_from_keys_parquet_plugin(dataset: OfflineDataset):
+def test_from_keys_parquet_plugin(dataset: BatchDatasetPlugin):
     assert dataset.name == "ds1"
     assert dataset.key == "my_key"
     assert dataset.path == ds1_path
     assert dataset.partition_by == "col1,run_id"
 
 
-def test_from_write(dataset: OfflineDataset, df: pd.DataFrame):
+def test_from_write(dataset: BatchDatasetPlugin, df: pd.DataFrame):
     dataset.write(df.copy())
     read_df = dataset.read_pandas(columns="col1,col2")
     assert (df == read_df).all().all()
 
 
 @pytest.mark.depends(on=["test_from_write"])
-def test_read_columns(dataset: OfflineDataset):
+def test_read_columns(dataset: BatchDatasetPlugin):
     df = dataset.read_pandas(columns="col1")
     assert df.columns.to_list() == ["col1"]
 
 
 @pytest.mark.parametrize("path", [None])
 @pytest.mark.parametrize("partition_by", ["col1"])
-def test_get_dataset_path(dataset: OfflineDataset, df: pd.DataFrame):
+def test_get_dataset_path(dataset: BatchDatasetPlugin, df: pd.DataFrame):
     dataset.write(df.copy())
     path = dataset._get_dataset_path()
     assert path.endswith("datasets/tests/data/datastore/my_program/ds1")
 
 
 @pytest.mark.parametrize("mode", [Mode.Read])
-def test_write_on_read_only(dataset: OfflineDataset):
+def test_write_on_read_only(dataset: BatchDatasetPlugin):
     df = pd.DataFrame({"col1": ["A", "A", "A", "B", "B", "B"], "col2": [1, 2, 3, 4, 5, 6]})
     with pytest.raises(InvalidOperationException):
         dataset.write(df.copy())
 
 
 @pytest.mark.parametrize("path", [None])
-def test_zillow_dataset_path_plugin(dataset: OfflineDataset, df: pd.DataFrame):
+def test_zillow_dataset_path_plugin(dataset: BatchDatasetPlugin, df: pd.DataFrame):
     # import registers it!
-    from datasets.plugins.offline.zillow_dataset_path import (
-        _get_offline_dataset_path,
+    from datasets.plugins.batch.zillow_dataset_path import (
+        _get_batch_dataset_path,
     )
 
     dataset.write(df.copy())
 
-    OfflineDataset._register_dataset_path_func(_get_offline_dataset_path)
+    BatchDatasetPlugin._register_dataset_path_func(_get_batch_dataset_path)
     path = dataset._get_dataset_path()
     assert path.endswith("datasets/tests/data/datastore/my_program/ds1")
 
@@ -99,14 +107,14 @@ def test_zillow_dataset_path_plugin(dataset: OfflineDataset, df: pd.DataFrame):
 @pytest.mark.parametrize("path", [None])
 @pytest.mark.parametrize("partition_by", ["col1"])
 @pytest.mark.parametrize("name", ["ds_dask"])
-def test_parquet_dask_dataset(dataset: OfflineDataset, df):
+def test_parquet_dask_dataset(dataset: BatchDatasetPlugin, df):
     dataset.write(df.copy())
     df = dataset.read_dask(columns="col1").compute()
     assert df.columns.to_list() == ["col1"]
 
 
 @pytest.mark.spark
-def test_parquet_spark_dataset(dataset: OfflineDataset, df):
+def test_parquet_spark_dataset(dataset: BatchDatasetPlugin, df):
     dataset.write(df.copy())
     spark_df = dataset.read_spark(columns="col1")
     spark_df.show()

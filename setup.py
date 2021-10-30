@@ -21,6 +21,7 @@ install_requires = [
     "importlib-metadata>=4.8.1,<5.0.0",
     "pandas>=1.1.0,<2.0.0",
     "pyarrow>=5.0.0,<6.0.0",
+    "click>=7.0,<8",
 ]
 
 extras_require = {
@@ -32,15 +33,15 @@ extras_require = {
 entry_points = {
     "datasets.executors": ["metaflow_executor = " "datasets.plugins:MetaflowExecutor"],
     "datasets.plugins": [
-        "offline_dataset = datasets.plugins:OfflineDataset",
-        "offline_flow_dataset = " "datasets.plugins:OfflineFlowDataset",
+        "batch_dataset = datasets.plugins:BatchDatasetPlugin",
+        "batch_flow_dataset = " "datasets.plugins:BatchFlowDatasetPlugin",
     ],
 }
 
 setup_kwargs = {
     "name": "zdatasets",
     "version": "0.0.1",
-    "description": "Dataset SDK for consistent read/write [offline, online, streaming] data for ML Programs.",
+    "description": "Dataset SDK for consistent read/write [batch, online, streaming] data for ML Programs.",
     "author": "Taleb Zeghmi",
     "packages": packages,
     "package_data": package_data,

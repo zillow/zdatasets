@@ -1,4 +1,4 @@
-from datasets.dataset import Dataset
+from datasets.dataset_plugin import DatasetPlugin
 from datasets.plugins import MetaflowExecutor
 
 
@@ -10,9 +10,9 @@ def register():
         entry.load()
 
     # Register default executor first
-    Dataset.register_executor(executor=MetaflowExecutor())
+    DatasetPlugin.register_executor(executor=MetaflowExecutor())
 
     for entry in entry_points(group="datasets.executors"):
         executor = entry.load()
         if not isinstance(executor, type(MetaflowExecutor)):
-            Dataset.register_executor(executor=executor)
+            DatasetPlugin.register_executor(executor=executor)

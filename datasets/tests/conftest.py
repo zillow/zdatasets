@@ -1,7 +1,8 @@
 import os
 import uuid
 
-from datasets.dataset import Dataset
+from datasets.context import Context
+from datasets.dataset_plugin import DatasetPlugin
 from datasets.program_executor import ProgramExecutor
 
 
@@ -22,8 +23,8 @@ class TestExecutor(ProgramExecutor):
         return "my_program"
 
     @property
-    def context(self) -> str:
-        return "offline"
+    def context(self) -> Context:
+        return Context.Batch
 
 
-Dataset.register_executor(executor=TestExecutor())
+DatasetPlugin.register_executor(executor=TestExecutor())

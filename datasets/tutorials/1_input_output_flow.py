@@ -1,12 +1,12 @@
 import pandas as pd
 from metaflow import Flow, FlowSpec, step
 
-from datasets import Mode, datasets
+from datasets import Mode, dataset
 
 
 class InputOutputDatasetFlow(FlowSpec):
-    @datasets.dataset(flow_dataset="HelloDatasetFlow.hello_dataset")
-    @datasets.dataset(name="output_dataset", partition_by="date_key,region", mode=Mode.Write)
+    @dataset(flow_dataset="HelloDatasetFlow.output_dataset", name="hello_dataset")
+    @dataset(name="output_dataset", partition_by="date_key,region", mode=Mode.Write)
     @step
     def start(self):
         df: pd.DataFrame = self.hello_dataset.read_pandas()
@@ -24,7 +24,8 @@ class InputOutputDatasetFlow(FlowSpec):
         )
 
         # Another way to access hello_dataset
-        my_df = Flow("HelloDatasetFlow").latest_successful_run.data.hello_dataset.read_pandas()
+        run = Flow("HelloDatasetFlow").latest_successful_run
+        my_df = run.data.hello_dataset.read_pandas(run_id=run.id)
         print(my_df.to_string(index=False))
 
 

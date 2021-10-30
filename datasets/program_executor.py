@@ -1,7 +1,13 @@
 from abc import ABC
 
+from datasets.context import Context
+
 
 class ProgramExecutor(ABC):
+    """
+    Class to access information about the ML program currently being executed.
+    """
+
     @property
     def current_run_id(self) -> str:
         pass
@@ -15,8 +21,8 @@ class ProgramExecutor(ABC):
         pass
 
     @property
-    def context(self) -> str:
+    def context(self) -> Context:
         """
-        execution context: offline, streaming, online
+        The current default data context for this execution environment.
         """
         pass
