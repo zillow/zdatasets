@@ -3,8 +3,7 @@ import os
 import pandas as pd  # type: ignore
 from metaflow import FlowSpec, step
 
-from datasets.datasets_decorator import datasets
-from datasets.mode import Mode
+from datasets import Mode, dataset
 
 
 flow_dir = os.path.dirname(os.path.realpath(__file__))
@@ -17,7 +16,7 @@ class ForeachDatasetFlow(FlowSpec):
         self.regions = ["A", "B"]
         self.next(self.foreach_split, foreach="regions")
 
-    @datasets.dataset(
+    @dataset(
         name="my_dataset_foreach",
         path=my_dataset_foreach_path,
         partition_by="region",

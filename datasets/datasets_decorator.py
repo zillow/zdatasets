@@ -1,42 +1,23 @@
 import functools
+from typing import Optional
 
-from .dataset import Dataset
-from .mode import Mode
+from datasets.context import Context
+
+from .dataset_plugin import DatasetPlugin
 
 
-class datasets:
-    @staticmethod
-    def dataset(
-        name: str = None,
-        flow_dataset: str = None,
-        key: str = None,
-        partition_by: str = None,
-        path: str = None,
-        columns=None,
-        mode: Mode = Mode.Read,
-    ):
-        def step_decorator(func):
-            @functools.wraps(func)
-            def step_wrapper(*args, **kwargs):
-                self = args[0]
-                dataset_name = name
-                if name is None and flow_dataset:
-                    flow_name, dataset_name = flow_dataset.split(".")
+def dataset(context: Optional[Context] = None, **dataset_kwargs):
+    def step_decorator(func):
+        @functools.wraps(func)
+        def step_wrapper(*args, **kwargs):
+            self = args[0]
+            dataset = DatasetPlugin.from_keys(context=context, **dataset_kwargs)
 
-                if not hasattr(self, dataset_name):
-                    dataset = Dataset(
-                        name=dataset_name,
-                        flow_dataset=flow_dataset,
-                        key=key,
-                        partition_by=partition_by,
-                        path=path,
-                        columns=columns,
-                        mode=mode,
-                    )
-                    setattr(self, dataset_name, dataset)
+            if not hasattr(self, dataset._attribute_name):
+                setattr(self, dataset._attribute_name, dataset)
 
-                func(*args, **kwargs)
+            func(*args, **kwargs)
 
-            return step_wrapper
+        return step_wrapper
 
-        return step_decorator
+    return step_decorator

@@ -15,6 +15,7 @@ def test_input_output_flow():
     run_flow("tutorials/1_input_output_flow.py")
 
 
+@pytest.mark.spark
 @pytest.mark.depends(on=["test_input_output_flow"])
 def test_dask_spark_flow():
     run_flow("tutorials/2_spark_dask_flow.py")
@@ -22,6 +23,11 @@ def test_dask_spark_flow():
 
 def test_foreach_flow():
     run_flow("tutorials/3_foreach_dataset_flow.py")
+
+
+@pytest.mark.depends(on=["test_foreach_flow"])
+def test_hello_plugin_flow():
+    run_flow("tutorials/4_hello_plugin_flow.py")
 
 
 def run_flow(flow_py):

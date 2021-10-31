@@ -1,11 +1,11 @@
 from dask.dataframe import DataFrame
 from metaflow import FlowSpec, step
 
-from datasets.datasets_decorator import datasets
+from datasets import dataset
 
 
 class SparkDaskFlow(FlowSpec):
-    @datasets.dataset(name="io_dataset", flow_dataset="InputOutputDatasetFlow.output_dataset")
+    @dataset(name="io_dataset", flow_dataset="InputOutputDatasetFlow.output_dataset")
     @step
     def start(self):
         print(f"I have dataset \n{self.io_dataset=}")
@@ -14,9 +14,8 @@ class SparkDaskFlow(FlowSpec):
     @step
     def end(self):
         # io_dataset read_spark()
-        # with SparkManager(auth=False):
-        spark_df: DataFrame = self.io_dataset.read_spark()
-        spark_df.show()
+        # spark_df: DataFrame = self.io_dataset.read_spark()
+        # spark_df.show()
 
         # io_dataset read_dask()
         dask_df: DataFrame = self.io_dataset.read_dask()
