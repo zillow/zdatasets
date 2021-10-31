@@ -22,7 +22,7 @@ def path():
 
 @pytest.fixture
 def mode():
-    return Mode.Write
+    return Mode.WRITE
 
 
 @pytest.fixture
@@ -38,7 +38,7 @@ def name():
 @pytest.fixture
 def dataset(name, path, partition_by, mode):
     return DatasetPlugin.from_keys(
-        context=Context.Batch,
+        context=Context.BATCH,
         name=name,
         logical_key="my_key",
         path=path,
@@ -79,7 +79,7 @@ def test_get_dataset_path(dataset: BatchDatasetPlugin, df: pd.DataFrame):
     assert path.endswith("datasets/tests/data/datastore/my_program/ds1")
 
 
-@pytest.mark.parametrize("mode", [Mode.Read])
+@pytest.mark.parametrize("mode", [Mode.READ])
 def test_write_on_read_only(dataset: BatchDatasetPlugin):
     df = pd.DataFrame({"col1": ["A", "A", "A", "B", "B", "B"], "col2": [1, 2, 3, 4, 5, 6]})
     with pytest.raises(InvalidOperationException):

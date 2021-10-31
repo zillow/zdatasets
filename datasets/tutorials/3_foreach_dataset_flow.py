@@ -20,7 +20,7 @@ class ForeachDatasetFlow(FlowSpec):
         name="my_dataset_foreach",
         path=my_dataset_foreach_path,
         partition_by="region",
-        mode=Mode.Write,
+        mode=Mode.WRITE,
     )
     @step
     def foreach_split(self):

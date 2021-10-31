@@ -18,10 +18,10 @@ class InvalidOperationException(Exception):
     pass
 
 
-@DatasetPlugin.register_plugin(constructor_keys={"name"}, context=Context.Batch)
+@DatasetPlugin.register_plugin(constructor_keys={"name"}, context=Context.BATCH)
 class BatchDatasetPlugin(DatasetPlugin):
     """
-    This is the default plugin for the Batch execution context.
+    This is the default plugin for the BATCH execution context.
     """
 
     _dataset_path_func: callable = None
@@ -32,7 +32,7 @@ class BatchDatasetPlugin(DatasetPlugin):
         logical_key: str = None,
         columns=None,
         run_id=None,
-        mode: Mode = Mode.Read,
+        mode: Mode = Mode.READ,
         path: Optional[str] = None,
         partition_by: Optional[str] = None,
         attribute_name: Optional[str] = None,
@@ -79,7 +79,7 @@ class BatchDatasetPlugin(DatasetPlugin):
         return df
 
     def write(self, data: pd.DataFrame, **kwargs):
-        if not (self.mode & Mode.Write):
+        if not (self.mode & Mode.WRITE):
             raise InvalidOperationException(f"Cannot write because mode={self.mode}")
 
         if not isinstance(data, pd.DataFrame):
@@ -95,8 +95,7 @@ class BatchDatasetPlugin(DatasetPlugin):
             # or run_id is in partition_cols
             if "run_id" not in partition_cols:
                 partition_cols.append("run_id")
-            if self.run_id is None:
-                self.run_id = self._executor.current_run_id
+            self.run_id = self._executor.current_run_id  # DO NOT ALLOW OVERWRITE OF ANOTHER RUN ID
             data["run_id"] = self.run_id
 
         data.to_parquet(
@@ -166,6 +165,7 @@ class BatchDatasetPlugin(DatasetPlugin):
 
     def __repr__(self):
         return (
-            f"Dataset(name={self.name}, key={self.key}, partition_by={self.partition_by}, "
-            f"columns={self.columns}, dataset_path={self._get_dataset_path()})"
+            f"BatchDatasetPlugin({self.name=},{self.key=},{self.partition_by=},"
+            f"{self.run_id=},"
+            f"{self.columns=},dataset_path={self._get_dataset_path()})"
         )

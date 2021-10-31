@@ -6,7 +6,7 @@ from datasets import Mode, dataset
 
 class InputOutputDatasetFlow(FlowSpec):
     @dataset(flow_dataset="HelloDatasetFlow.output_dataset", name="hello_dataset")
-    @dataset(name="output_dataset", partition_by="date_key,region", mode=Mode.Write)
+    @dataset(name="output_dataset", partition_by="date_key,region", mode=Mode.WRITE)
     @step
     def start(self):
         df: pd.DataFrame = self.hello_dataset.read_pandas()

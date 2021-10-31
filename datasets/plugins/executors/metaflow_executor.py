@@ -25,4 +25,4 @@ class MetaflowExecutor(ProgramExecutor):
 
     @property
     def context(self) -> Context:
-        return Context.Batch
+        return Context.BATCH
