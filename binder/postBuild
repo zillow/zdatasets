@@ -4,8 +4,6 @@ set -ex
 
 pip install --upgrade git+https://github.com/zillow/metaflow.git@tz/coverage
 pip install poetry
-poetry install -E dask -E spark
-#python datasets/tutorials/0_hello_dataset_flow.py --no-pylint run
+poetry install -E dask
 
-# Setup a workspace
-jupyter lab workspaces import binder/workshop.jupyterlab-workspace
+jupyter lab workspaces import binder/tutorials.jupyterlab-workspace || true

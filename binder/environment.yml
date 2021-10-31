@@ -16,7 +16,7 @@ dependencies:
 #- geopy=2.1.0
 #- bqplot=0.12.20
 # - metaflow
-- matplotlib=3.4.3
+#- matplotlib=3.4.3
 #- pandas=1.2.4
 #- Pillow=8.2.0
 - python=3.9
