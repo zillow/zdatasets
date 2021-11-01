@@ -3,7 +3,7 @@
 set -ex
 
 pip install --upgrade git+https://github.com/zillow/metaflow.git@tz/coverage
-pip install poetry
+curl -sSL https://raw.githubusercontent.com/python-poetry/poetry/master/get-poetry.py | python -
 poetry install -E dask
 
-jupyter lab workspaces import binder/tutorials.jupyterlab-workspace || true
+#jupyter lab workspaces import binder/tutorials.jupyterlab-workspace || true
