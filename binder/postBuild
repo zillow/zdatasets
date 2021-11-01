@@ -9,8 +9,11 @@ pip install pandas==1.1.5 dask pyspark==3.2.0
 pip install poetry
 
 which python
+echo "poetry run which env #1"
+poetry run which python
+poetry env use $(which python)
+echo "poetry run which env #2"
 poetry run which python
 
 poetry config experimental.new-installer false
-#poetry config virtualenvs.in-project true
 poetry install -E dask -E spark
