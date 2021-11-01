@@ -3,8 +3,6 @@
 set -ex
 
 pip install --upgrade git+https://github.com/zillow/metaflow.git@tz/coverage
-#pip install pandas==1.1.5 dask pyspark==3.2.0
-#curl -sSL https://raw.githubusercontent.com/python-poetry/poetry/master/get-poetry.py | python -
 
 pip install poetry
 
