@@ -3,6 +3,7 @@
 set -ex
 
 pip install --upgrade git+https://github.com/zillow/metaflow.git@tz/coverage
+pip install pandas dask pandas pyspark
 curl -sSL https://raw.githubusercontent.com/python-poetry/poetry/master/get-poetry.py | python -
 $HOME/.poetry/bin/poetry config experimental.new-installer false
 $HOME/.poetry/bin/poetry install -E dask -E spark
