@@ -16,3 +16,9 @@ COPY . ${HOME}
 USER root
 RUN chown -R ${NB_UID} ${HOME}
 USER ${NB_USER}
+
+#curl -sSL https://raw.githubusercontent.com/python-poetry/poetry/master/get-poetry.py | python -
+RUN pip install --upgrade git+https://github.com/zillow/metaflow.git@tz/coverage \
+  && pip install poetry \
+  && poetry config experimental.new-installer false \
+  && poetry install -E dask
