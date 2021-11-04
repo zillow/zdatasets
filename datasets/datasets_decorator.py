@@ -13,8 +13,8 @@ def dataset(context: Optional[Context] = None, **dataset_kwargs):
             self = args[0]
             dataset = DatasetPlugin.from_keys(context=context, **dataset_kwargs)
 
-            if not hasattr(self, dataset._attribute_name):
-                setattr(self, dataset._attribute_name, dataset)
+            if not hasattr(self, dataset._class_field_name):
+                setattr(self, dataset._class_field_name, dataset)
 
             func(*args, **kwargs)
 

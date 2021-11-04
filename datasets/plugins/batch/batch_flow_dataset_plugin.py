@@ -17,7 +17,7 @@ class BatchFlowDatasetPlugin(BatchDatasetPlugin):
         name: str = None,
         columns=None,
         run_id: Optional[str] = "latest_successful_run",
-        attribute_name: Optional[str] = None,
+        class_field_name: Optional[str] = None,
     ):
 
         self.flow_dataset = flow_dataset
@@ -32,7 +32,7 @@ class BatchFlowDatasetPlugin(BatchDatasetPlugin):
             logical_key=dataset.key,
             columns=columns,
             run_id=run_id,
-            attribute_name=attribute_name if attribute_name else (name if name else self.dataset_name),
+            class_field_name=class_field_name if class_field_name else (name if name else self.dataset_name),
         )
         # The program name is that of the original dataset name
         self.program_name = dataset.program_name

@@ -33,9 +33,9 @@ class BatchDatasetPlugin(DatasetPlugin):
         columns=None,
         run_id=None,
         mode: Mode = Mode.READ,
-        path: Optional[str] = None,
+        class_field_name: Optional[str] = None,
         partition_by: Optional[str] = None,
-        attribute_name: Optional[str] = None,
+        path: Optional[str] = None,
     ):
         self.path = path
         self.partition_by = partition_by
@@ -46,7 +46,7 @@ class BatchDatasetPlugin(DatasetPlugin):
             columns=columns,
             run_id=run_id,
             mode=mode,
-            attribute_name=attribute_name,
+            class_field_name=class_field_name,
         )
 
     def _get_path_filters_columns(self, columns, run_id: Optional[str] = None) -> Tuple[str, list, list[str]]:
@@ -91,7 +91,7 @@ class BatchDatasetPlugin(DatasetPlugin):
             partition_cols = list()
 
         if self.path is None or "run_id" in partition_cols:
-            # Only partition on run_id if @dataset(path="s3://..") is given
+            # Only partition on run_id if @dataset(path="s3://..") is not given
             # or run_id is in partition_cols
             if "run_id" not in partition_cols:
                 partition_cols.append("run_id")

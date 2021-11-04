@@ -27,16 +27,29 @@ class DatasetPlugin(ABC):
         columns=None,
         run_id: Optional[str] = None,
         mode: Union[Mode, str] = Mode.READ,
-        attribute_name: Optional[str] = None,
+        class_field_name: Optional[str] = None,
     ):
+        """
+
+        :param name: The dataset logical name.
+        :param logical_key:
+            The logical primary key, strongly suggested, and can later be
+            used when creating Hive/Dynamo tables or registering with a Catalog.
+        :param columns: Fetch columns
+        :param run_id: The ML Program run_id partition to select from.
+        :param mode: The data access read/write mode
+        :param class_field_name:
+            To be used by @dataset decorator to set the class
+            self.`class_field_name` field name, otherwise sets self.`name` as the class name
+        """
         self.name = name
         self.key = logical_key
         self.mode: Mode = mode if isinstance(mode, Mode) else Mode[mode]
         self.columns = columns
         self.run_id = run_id
-        self._attribute_name = attribute_name
-        if not self._attribute_name:
-            self._attribute_name = name
+        self._class_field_name = class_field_name
+        if not self._class_field_name:
+            self._class_field_name = name
 
     @classmethod
     def from_keys(cls, context: Optional[Union[Context, str]] = None, **kwargs) -> DatasetPlugin:
