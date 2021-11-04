@@ -1,6 +1,6 @@
 ![Tests](https://github.com/zillow/datasets/actions/workflows/test.yml/badge.svg)
 [![Coverage Status](https://coveralls.io/repos/github/zillow/datasets/badge.svg)](https://coveralls.io/github/zillow/datasets)
-[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/zillow/datasets/tz/consistent_flow?urlpath=lab/tree/datasets/tutorials)
+[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/zillow/datasets/feature/datasets?urlpath=lab/tree/datasets/tutorials)
 
 TODO: doc badge
 
@@ -12,33 +12,44 @@ TODO
 
 ```python
 import pandas as pd
-from metaflow import FlowSpec, step
+from metaflow import FlowSpec, Parameter, current, step
 
-from datasets.datasets_decorator import datasets
-from datasets.mode import Mode
+from datasets import DatasetType, Mode
 
 
+# Can also invoke from CLI:
+#  > python datasets/tutorials/0_hello_dataset_flow.py run \
+#    --hello_dataset '{"name": "foo", "partition_by": "region", "mode": "Write"}'
 class HelloDatasetFlow(FlowSpec):
-    @datasets.dataset(name="hello_dataset", partition_by="region", mode=Mode.WRITE)
+    hello_dataset = Parameter(  # immutable
+        "hello_dataset",
+        default=dict(name="hello_dataset", partition_by="region", mode=Mode.Write),
+        type=DatasetType,
+    )
+
     @step
     def start(self):
         df = pd.DataFrame({"region": ["A", "A", "A", "B", "B", "B"], "zpid": [1, 2, 3, 4, 5, 6]})
         print("saving df: \n", df.to_string(index=False))
 
         # Example of writing to a dataset
+        print(f"{self.hello_dataset.program_name=}")
         self.hello_dataset.write(df)
 
-        self.next(self.end)
+            self.next(self.end)
 
-    @step
-    def end(self):
-        print(f"I have dataset \n{self.hello_dataset=}")
+        @step
+        def end(self):
+            print(f"I have dataset \n{self.hello_dataset=}")
 
         # hello_dataset read_pandas()
-        df: pd.DataFrame = self.hello_dataset.read_pandas()
+        df: pd.DataFrame = self.hello_dataset.read_pandas(run_id=current.run_id)
         print("self.hello_dataset.read_pandas():\n", df.to_string(index=False))
 
+        # save this as an output dataset
+        self.output_dataset = self.hello_dataset
 
-if __name__ == "__main__":
-    HelloDatasetFlow()
+
+    if __name__ == "__main__":
+        HelloDatasetFlow()
 ```

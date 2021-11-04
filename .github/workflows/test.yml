@@ -48,7 +48,7 @@ jobs:
     - name: Install Dependencies
       run: |
         poetry install -E dask -E spark
-        poetry run pip install --upgrade git+https://github.com/zillow/metaflow.git@tz/coverage
+        poetry run pip install --upgrade git+https://github.com/zillow/metaflow.git@feature/kfp
       if: steps.cache.outputs.cache-hit != 'true'
 
     - name: Code Quality Check
