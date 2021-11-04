@@ -10,6 +10,8 @@ _run_id = str(uuid.uuid1())
 
 
 class TestExecutor(ProgramExecutor):
+    current_context = Context.BATCH
+
     @property
     def current_run_id(self) -> str:
         return _run_id
@@ -24,7 +26,7 @@ class TestExecutor(ProgramExecutor):
 
     @property
     def context(self) -> Context:
-        return Context.Batch
+        return TestExecutor.current_context
 
 
 DatasetPlugin.register_executor(executor=TestExecutor())

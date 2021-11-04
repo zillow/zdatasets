@@ -2,6 +2,7 @@ import os
 import sys
 from os.path import dirname, realpath
 from subprocess import PIPE, STDOUT, run
+from typing import Optional
 
 import pytest
 
@@ -30,10 +31,41 @@ def test_hello_plugin_flow():
     run_flow("tutorials/4_hello_plugin_flow.py")
 
 
-def run_flow(flow_py):
+def test_consistent_flow():
+    run_flow("tutorials/5_consistent_flow.py")
+
+
+def test_consistent_flow_():
+    run_flow("tutorials/5_consistent_flow.py")
+    run_flow("tutorials/5_consistent_flow.py", context="ONLINE")
+    run_flow(
+        "tutorials/5_consistent_flow.py",
+        ["--hello_ds", '{"name": "hello_ds", "mode": "WRITE", "columns": "value"}'],
+    )
+    run_flow(
+        "tutorials/5_consistent_flow.py",
+        ["--hello_ds", '{"name": "hello_ds", "mode": "WRITE", "columns": "value"}'],
+        context="ONLINE",
+    )
+    run_flow(
+        "tutorials/5_consistent_flow.py",
+        ["--hello_ds", '{"name": "hello_ds", "mode": "WRITE", "columns": "value"}'],
+        context="ONLINE",
+    )
+    run_flow(
+        "tutorials/5_consistent_flow.py",
+        ["--hello_ds", '{"name": "hello_ds", "mode": "WRITE", "keys": "secret"}'],
+        context="ONLINE",
+    )
+
+
+def run_flow(flow_py, args: Optional[list] = None, context: Optional[str] = None) -> str:
     os.environ["METAFLOW_COVERAGE_SOURCE"] = "tutorial,datasets"
     os.environ["METAFLOW_COVERAGE_OMIT"] = "metaflow"
     os.environ["METAFLOW_USER"] = "compile_only_user"
+    if context:
+        os.environ["CONTEXT"] = context
+
     base_dir = dirname(dirname(realpath(__file__)))
     file_name = os.path.join(base_dir, flow_py)
     cmd = [
@@ -43,6 +75,10 @@ def run_flow(flow_py):
         "--no-pylint",
         "run",
     ]
-    process = run(cmd, stdout=PIPE, stderr=STDOUT, encoding="utf8")
-    print(process.stdout)
-    assert process.returncode == 0, process.stdout
+    if args:
+        cmd.extend(args)
+    process = run(cmd, cwd=dirname(base_dir), stdout=PIPE, stderr=STDOUT, encoding="utf8")
+    stdout = process.stdout
+    assert process.returncode == 0, stdout
+
+    return stdout

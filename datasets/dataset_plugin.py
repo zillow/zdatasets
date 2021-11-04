@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from abc import ABC
-from typing import Callable, Dict, List, Optional
+from typing import Callable, Dict, Iterable, Optional, Union
 
 from datasets.context import Context
 
@@ -24,32 +24,46 @@ class DatasetPlugin(ABC):
         self,
         name: str,
         logical_key: Optional[str] = None,
-        columns=None,
+        columns: Optional[Union[Iterable[str], str]] = None,
         run_id: Optional[str] = None,
-        mode: Mode = Mode.Read,
-        attribute_name: Optional[str] = None,
+        mode: Union[Mode, str] = Mode.READ,
+        class_field_name: Optional[str] = None,
     ):
+        """
+
+        :param name: The dataset logical name.
+        :param logical_key:
+            The logical primary key, strongly suggested, and can later be
+            used when creating Hive/Dynamo tables or registering with a Catalog.
+        :param columns: Fetch columns
+        :param run_id: The ML Program run_id partition to select from.
+        :param mode: The data access read/write mode
+        :param class_field_name:
+            To be used by @dataset decorator to set the class
+            self.`class_field_name` field name, otherwise sets self.`name` as the class name
+        """
         self.name = name
         self.key = logical_key
-        self.mode = mode if isinstance(mode, Mode) else Mode[mode]
+        self.mode: Mode = mode if isinstance(mode, Mode) else Mode[mode]
         self.columns = columns
         self.run_id = run_id
-        self._attribute_name = attribute_name
-        if not self._attribute_name:
-            self._attribute_name = name
+        self._class_field_name = class_field_name
+        if not self._class_field_name:
+            self._class_field_name = name
 
     @classmethod
-    def from_keys(cls, context: Optional[Context] = None, **kwargs) -> DatasetPlugin:
+    def from_keys(cls, context: Optional[Union[Context, str]] = None, **kwargs) -> DatasetPlugin:
         """
         This is the factory method for datasets. Not directly used by the user.
-        For example usage please see test_from_keys()
+        For example usage please see test_from_keys*() unit tests.
 
         :param context: If not specified it uses the current executor context.
         :param kwargs: dataset constructor args
         :return: found DatasetPlugin
         """
         dataset_args = set(kwargs.keys())
-        context_lookup: Context = context if context else cls._executor.context
+
+        context_lookup = cls._get_context(context)
 
         default_plugin: Optional[DatasetPlugin] = None
         max_intersect_count = 0
@@ -76,10 +90,17 @@ class DatasetPlugin(ABC):
             raise ValueError(f"f{kwargs} and {context_lookup=} not found in {cls._plugins}")
 
     @classmethod
+    def _get_context(cls, context: Optional[Union[Context, str]] = None) -> Context:
+        if context:
+            return context if isinstance(context, Context) else Context[context]
+        else:
+            return cls._executor.context
+
+    @classmethod
     def register_plugin(cls, constructor_keys: set[str], context: Context) -> Callable:
         """
         Registration method for a dataset plugin.
-        Plugins area looked up by (constructor_keys, context), so no two can be registered at the same time.
+        Plugins are looked up by (constructor_keys, context), so no two can be registered at the same time.
 
         Plugins are constructed by from_keys(), by ensuring that the current
         ProgramExecutor.context == plugin.context
@@ -120,7 +141,9 @@ class DatasetPlugin(ABC):
     def register_executor(cls, executor: ProgramExecutor):
         cls._executor = executor
 
-    def _get_read_columns(self, columns: Optional[str] = None) -> List[str]:
+    def _get_read_columns(
+        self, columns: Optional[Union[Iterable[str], str]] = None
+    ) -> Optional[Iterable[str]]:
         read_columns = columns if columns else self.columns
         if read_columns is not None and isinstance(read_columns, str):
             read_columns = read_columns.split(",")
@@ -130,4 +153,4 @@ class DatasetPlugin(ABC):
         return self.__repr__()
 
     def __repr__(self):
-        return f"DatasetPlugin(name={self.name}, key={self.key}, columns={self.columns})"
+        return f"DatasetPlugin({self.name=},{self.mode=},{self.key=},{self.columns=})"

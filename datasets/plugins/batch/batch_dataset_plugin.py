@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import TYPE_CHECKING, Optional, Tuple
+from typing import TYPE_CHECKING, Iterable, Optional, Tuple, Union
 
 import pandas
 import pandas as pd
@@ -18,10 +18,10 @@ class InvalidOperationException(Exception):
     pass
 
 
-@DatasetPlugin.register_plugin(constructor_keys={"name"}, context=Context.Batch)
+@DatasetPlugin.register_plugin(constructor_keys={"name"}, context=Context.BATCH)
 class BatchDatasetPlugin(DatasetPlugin):
     """
-    This is the default plugin for the Batch execution context.
+    This is the default plugin for the BATCH execution context.
     """
 
     _dataset_path_func: callable = None
@@ -30,12 +30,12 @@ class BatchDatasetPlugin(DatasetPlugin):
         self,
         name: str,
         logical_key: str = None,
-        columns=None,
-        run_id=None,
-        mode: Mode = Mode.Read,
-        path: Optional[str] = None,
+        columns: Optional[Union[Iterable[str], str]] = None,
+        run_id: Optional[str] = None,
+        mode: Mode = Mode.READ,
+        class_field_name: Optional[str] = None,
         partition_by: Optional[str] = None,
-        attribute_name: Optional[str] = None,
+        path: Optional[str] = None,
     ):
         self.path = path
         self.partition_by = partition_by
@@ -46,10 +46,12 @@ class BatchDatasetPlugin(DatasetPlugin):
             columns=columns,
             run_id=run_id,
             mode=mode,
-            attribute_name=attribute_name,
+            class_field_name=class_field_name,
         )
 
-    def _get_path_filters_columns(self, columns, run_id: Optional[str] = None) -> Tuple[str, list, list[str]]:
+    def _get_path_filters_columns(
+        self, columns: Optional[Union[Iterable[str], str]] = None, run_id: Optional[str] = None
+    ) -> Tuple[str, Optional[list], Optional[Iterable[str]]]:
         path = self._get_dataset_path()
         read_columns = self._get_read_columns(columns)
         filters = None
@@ -79,7 +81,7 @@ class BatchDatasetPlugin(DatasetPlugin):
         return df
 
     def write(self, data: pd.DataFrame, **kwargs):
-        if not (self.mode & Mode.Write):
+        if not (self.mode & Mode.WRITE):
             raise InvalidOperationException(f"Cannot write because mode={self.mode}")
 
         if not isinstance(data, pd.DataFrame):
@@ -91,12 +93,11 @@ class BatchDatasetPlugin(DatasetPlugin):
             partition_cols = list()
 
         if self.path is None or "run_id" in partition_cols:
-            # Only partition on run_id if @dataset(path="s3://..") is given
+            # Only partition on run_id if @dataset(path="s3://..") is not given
             # or run_id is in partition_cols
             if "run_id" not in partition_cols:
                 partition_cols.append("run_id")
-            if self.run_id is None:
-                self.run_id = self._executor.current_run_id
+            self.run_id = self._executor.current_run_id  # DO NOT ALLOW OVERWRITE OF ANOTHER RUN ID
             data["run_id"] = self.run_id
 
         data.to_parquet(
@@ -166,6 +167,7 @@ class BatchDatasetPlugin(DatasetPlugin):
 
     def __repr__(self):
         return (
-            f"Dataset(name={self.name}, key={self.key}, partition_by={self.partition_by}, "
-            f"columns={self.columns}, dataset_path={self._get_dataset_path()})"
+            f"BatchDatasetPlugin({self.name=},{self.key=},{self.partition_by=},"
+            f"{self.run_id=},"
+            f"{self.columns=},dataset_path={self._get_dataset_path()})"
         )
