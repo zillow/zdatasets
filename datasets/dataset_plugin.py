@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from abc import ABC
-from typing import Callable, Dict, List, Optional, Union
+from typing import Callable, Dict, Iterable, Optional, Union
 
 from datasets.context import Context
 
@@ -24,7 +24,7 @@ class DatasetPlugin(ABC):
         self,
         name: str,
         logical_key: Optional[str] = None,
-        columns=None,
+        columns: Optional[Union[Iterable[str], str]] = None,
         run_id: Optional[str] = None,
         mode: Union[Mode, str] = Mode.READ,
         class_field_name: Optional[str] = None,
@@ -100,7 +100,7 @@ class DatasetPlugin(ABC):
     def register_plugin(cls, constructor_keys: set[str], context: Context) -> Callable:
         """
         Registration method for a dataset plugin.
-        Plugins area looked up by (constructor_keys, context), so no two can be registered at the same time.
+        Plugins are looked up by (constructor_keys, context), so no two can be registered at the same time.
 
         Plugins are constructed by from_keys(), by ensuring that the current
         ProgramExecutor.context == plugin.context
@@ -141,7 +141,9 @@ class DatasetPlugin(ABC):
     def register_executor(cls, executor: ProgramExecutor):
         cls._executor = executor
 
-    def _get_read_columns(self, columns: Optional[str] = None) -> List[str]:
+    def _get_read_columns(
+        self, columns: Optional[Union[Iterable[str], str]] = None
+    ) -> Optional[Iterable[str]]:
         read_columns = columns if columns else self.columns
         if read_columns is not None and isinstance(read_columns, str):
             read_columns = read_columns.split(",")

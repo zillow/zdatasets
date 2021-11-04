@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import TYPE_CHECKING, Optional, Tuple
+from typing import TYPE_CHECKING, Iterable, Optional, Tuple, Union
 
 import pandas
 import pandas as pd
@@ -30,8 +30,8 @@ class BatchDatasetPlugin(DatasetPlugin):
         self,
         name: str,
         logical_key: str = None,
-        columns=None,
-        run_id=None,
+        columns: Optional[Union[Iterable[str], str]] = None,
+        run_id: Optional[str] = None,
         mode: Mode = Mode.READ,
         class_field_name: Optional[str] = None,
         partition_by: Optional[str] = None,
@@ -49,7 +49,9 @@ class BatchDatasetPlugin(DatasetPlugin):
             class_field_name=class_field_name,
         )
 
-    def _get_path_filters_columns(self, columns, run_id: Optional[str] = None) -> Tuple[str, list, list[str]]:
+    def _get_path_filters_columns(
+        self, columns: Optional[Union[Iterable[str], str]] = None, run_id: Optional[str] = None
+    ) -> Tuple[str, Optional[list], Optional[Iterable[str]]]:
         path = self._get_dataset_path()
         read_columns = self._get_read_columns(columns)
         filters = None

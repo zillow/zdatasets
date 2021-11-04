@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Optional, Tuple
+from typing import TYPE_CHECKING, Iterable, Optional, Tuple, Union
 
 from datasets.context import Context
 from datasets.dataset_plugin import DatasetPlugin
@@ -15,7 +15,7 @@ class BatchFlowDatasetPlugin(BatchDatasetPlugin):
         self,
         flow_dataset: str,
         name: str = None,
-        columns=None,
+        columns: Optional[Union[Iterable[str], str]] = None,
         run_id: Optional[str] = "latest_successful_run",
         class_field_name: Optional[str] = None,
     ):
