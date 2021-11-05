@@ -1,15 +1,14 @@
 import pandas as pd
 from metaflow import FlowSpec, step
 
-import datasets
-from datasets import Mode
+from datasets import Mode, dataset
 from datasets.txf_integration.txf_utils import TXF_REGISTERED_DATASETS_ATTRIBUTE, TXF_CALLBACKS_ATTRIBUTE, \
     TXF_METADATA_ATTRIBUTE
 
 
 class TxTestFlow(FlowSpec):
 
-    @datasets.dataset(ds_name="txf_dataset", partition_by="region", mode=Mode.Write)
+    @dataset(name="txf_dataset", partition_by="region", mode=Mode.WRITE)
     @step
     def start(self):
         df = pd.DataFrame({"region": ["A", "A", "A", "B", "B", "B"], "home_id": [1, 2, 3, 4, 5, 6]})
