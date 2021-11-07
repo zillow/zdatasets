@@ -85,8 +85,8 @@ class BatchDatasetPlugin(DatasetPlugin):
         conf: Optional["SparkConf"] = None,
         **kwargs,
     ) -> "ps.DataFrame":
-        sdf = self.read_spark(columns=columns, run_id=run_id, conf=conf, **kwargs)
-        psdf = sdf.to_pandas_on_spark(index_col=kwargs.get("index_col", None))
+        sdf: SparkDataFrame = self.read_spark(columns=columns, run_id=run_id, conf=conf, **kwargs)
+        psdf: ps.DataFrame = sdf.to_pandas_on_spark(index_col=kwargs.get("index_col", None))
         return psdf
 
     def read_pandas(
@@ -180,12 +180,24 @@ class BatchDatasetPlugin(DatasetPlugin):
         # TODO: what should we do if the type doesn't match with BATCH_DEFAULT_CONTAINER?
         #   -  Should we force writes through the BATCH_DEFAULT_CONTAINER??
         if isinstance(data, pd.DataFrame):
-            return self.write_pandas(data, **kwargs)
+            if DataContainerType.SPARK_PANDAS == BATCH_DEFAULT_CONTAINER:
+                from pyspark import pandas as ps
+
+                print(
+                    "<< Converting the Pandas DataFrame to Spark DataFrame "
+                    "then write using Spark >>"
+                )
+                psdf: ps.DataFrame = ps.from_pandas(data)
+                return self.write_spark_pandas(psdf, **kwargs)
+            else:
+                return self.write_pandas(data, **kwargs)
         elif "pyspark.pandas.frame.DataFrame" in str(type(data)):
             return self.write_spark_pandas(data, **kwargs)
         elif "pyspark.sql.dataframe.DataFrame" in str(type(data)):
             return self.write_spark(data, **kwargs)
         elif "dask.dataframe.core.DataFrame" in str(type(data)):
+            # TODO: what do we do with Dask BATCH_DEFAULT_CONTAINER == SPARK_PANDAS?
+            #   Is the onus on the Dask user?
             return self.write_dask(data, **kwargs)
         else:
             raise ValueError(
@@ -275,7 +287,7 @@ class BatchDatasetPlugin(DatasetPlugin):
 
         df.write.options(**kwargs).parquet(
             path=self._get_dataset_path(),
-            mode=kwargs.get("mode", None),
+            mode=kwargs.get("mode", "overwrite"),  # TODO: should this be the default policy??
             partitionBy=partition_cols,
             compression=kwargs.get("compression", "snappy"),
         )
