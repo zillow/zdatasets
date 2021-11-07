@@ -46,7 +46,8 @@ class ConsistentFlow(FlowSpec):
         df = pd.DataFrame([{"key": "secret", "value": 42}])
         self.hello_ds.write(df)
 
-        read_df = self.hello_ds.read_pandas()
+        read_df = self.hello_ds.read()
+        print(f"{type(read_df)=}")
         print(f"{read_df=}")
 
         self.next(self.end)

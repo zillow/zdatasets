@@ -1,6 +1,6 @@
 ![Tests](https://github.com/zillow/datasets/actions/workflows/test.yml/badge.svg)
 [![Coverage Status](https://coveralls.io/repos/github/zillow/datasets/badge.svg)](https://coveralls.io/github/zillow/datasets)
-[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/zillow/datasets/feature/datasets?urlpath=lab/tree/datasets/tutorials)
+[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/zillow/datasets/tz/spark_pandas?urlpath=lab/tree/datasets/tutorials)
 
 TODO: doc badge
 

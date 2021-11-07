@@ -125,7 +125,7 @@ def test_parquet_dask_dataset(dataset: BatchDatasetPlugin, df):
 
 
 @pytest.mark.spark
-def test_parquet_spark_dataset(dataset: BatchDatasetPlugin, df: pd.DataFrame):
+def test_parquet_spark_dataset(dataset: BatchDatasetPlugin, df: pd.DataFrame, spark_session):
     dataset.write(df.copy())
     spark_df = dataset.read_spark(columns="col1")
     spark_df.show()
