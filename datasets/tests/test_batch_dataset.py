@@ -2,6 +2,7 @@ import os
 
 import pandas as pd
 import pytest
+from pandas._testing import assert_frame_equal
 
 from datasets import Mode
 from datasets.context import Context
@@ -14,7 +15,7 @@ ds1_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "data/ds1")
 
 
 @pytest.fixture
-def path():
+def path() -> str:
     return ds1_path
 
 
@@ -24,17 +25,17 @@ def mode():
 
 
 @pytest.fixture
-def partition_by():
+def partition_by() -> str:
     return "col1,run_id"
 
 
 @pytest.fixture
-def name():
+def name() -> str:
     return "Ds1"
 
 
 @pytest.fixture
-def dataset(name, path, partition_by, mode):
+def dataset(name: str, path: str, partition_by: str, mode: Mode):
     return DatasetPlugin.from_keys(
         context=Context.BATCH,
         name=name,
@@ -46,7 +47,7 @@ def dataset(name, path, partition_by, mode):
 
 
 @pytest.fixture
-def df():
+def df() -> pd.DataFrame:
     return pd.DataFrame({"col1": ["A", "A", "A", "B", "B", "B"], "col2": [1, 2, 3, 4, 5, 6]})
 
 
@@ -124,10 +125,22 @@ def test_parquet_dask_dataset(dataset: BatchDatasetPlugin, df):
 
 
 @pytest.mark.spark
-def test_parquet_spark_dataset(dataset: BatchDatasetPlugin, df):
+def test_parquet_spark_dataset(dataset: BatchDatasetPlugin, df: pd.DataFrame):
     dataset.write(df.copy())
     spark_df = dataset.read_spark(columns="col1")
     spark_df.show()
-    df = spark_df.toPandas()
-    assert df.columns.to_list() == ["col1", "run_id"]  # run_id is added
-    print(f"{df=}")
+    assert spark_df.columns == ["col1", "run_id"]  # run_id is added
+
+
+@pytest.mark.spark
+def test_default_read(dataset: BatchDatasetPlugin, df: pd.DataFrame, spark_session):
+    from pyspark import pandas as ps
+
+    psdf: ps.DataFrame = ps.from_pandas(df)
+
+    dataset.write(psdf, mode="overwrite")
+    read_psdf: ps.DataFrame = dataset.read()
+
+    assert isinstance(read_psdf, ps.DataFrame)
+    read_df = read_psdf.to_pandas()
+    assert_frame_equal(df, read_df, check_like=True)

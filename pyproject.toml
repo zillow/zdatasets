@@ -62,7 +62,7 @@ combine_as_imports = true
 include_trailing_comma = true
 
 [tool.black]
-line-length = 110
+line-length = 100
 include = '\.pyi?$'
 exclude = '''
 /(

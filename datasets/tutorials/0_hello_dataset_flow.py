@@ -17,7 +17,7 @@ class HelloDatasetFlow(FlowSpec):
     @step
     def start(self):
         df = pd.DataFrame({"region": ["A", "A", "A", "B", "B", "B"], "zpid": [1, 2, 3, 4, 5, 6]})
-        print("saving df: \n", df.to_string(index=False))
+        print("saving data_frame: \n", df.to_string(index=False))
 
         # Example of writing to a dataset
         print(f"{self.hello_dataset.program_name=}")
