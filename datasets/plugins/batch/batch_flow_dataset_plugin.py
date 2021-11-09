@@ -17,7 +17,6 @@ class BatchFlowDatasetPlugin(BatchDatasetPlugin):
         name: str = None,
         columns: Optional[Union[Iterable[str], str]] = None,
         run_id: Optional[str] = "latest_successful_run",
-        class_field_name: Optional[str] = None,
     ):
 
         self.flow_dataset = flow_dataset
@@ -32,7 +31,6 @@ class BatchFlowDatasetPlugin(BatchDatasetPlugin):
             logical_key=dataset.key,
             columns=columns,
             run_id=run_id,
-            class_field_name=class_field_name if class_field_name else (name if name else self.dataset_name),
         )
         # The program name is that of the original dataset name
         self.program_name = dataset.program_name

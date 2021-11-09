@@ -11,20 +11,14 @@ def dataset(name: str, field_name: Optional[str] = None, context: Optional[Conte
         @functools.wraps(func)
         def step_wrapper(*args, **kwargs):
             self = args[0]
-            dataset = DatasetPlugin.from_keys(
-                name=name, class_field_name=field_name, context=context, **dataset_kwargs
-            )
+            dataset = DatasetPlugin.from_keys(name=name, context=context, **dataset_kwargs)
 
-            if not dataset._class_field_name.isidentifier() or keyword.iskeyword(dataset._class_field_name):
-                if field_name is None:
-                    raise ValueError(
-                        f"{name} is not a valid Python identifier, "
-                        "please use 'field_name' for class field name"
-                    )
-                else:
+            if field_name:
+                if not field_name.isidentifier() or keyword.iskeyword(field_name):
                     raise ValueError(f"{field_name} is not a valid Python identifier")
-
-            setattr(self, dataset._class_field_name, dataset)
+                setattr(self, field_name, dataset)
+            else:
+                setattr(self, name, dataset)
 
             func(*args, **kwargs)
 

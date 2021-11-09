@@ -18,15 +18,17 @@ def test_step_decorator():
 
 
 def test_step_decorator_class_field_name():
+    ds_name = "ds_fee_yoyo"
+
     class Foo:
-        @dataset(name="ds-fee", field_name="ds_fee")
+        @dataset(name=ds_name, field_name="ds_fee")
         def hi(self):
-            assert self.ds_fee.name == "ds-fee"
+            assert self.ds_fee.name == ds_name
             assert isinstance(self.ds_fee, BatchDatasetPlugin)
 
     foo = Foo()
     foo.hi()
-    assert foo.ds_fee.name == "ds-fee"
+    assert foo.ds_fee.name == ds_name
     assert isinstance(foo.ds_fee, BatchDatasetPlugin)
 
 
@@ -42,7 +44,7 @@ def test_step_decorator_class_bad_name():
         foo = Foo()
         foo.hi()
 
-    assert f"{bad_name} is not a valid Python identifier, please use 'field_name'" in str(exc_info.value)
+    assert f"'{bad_name}' is not a valid Dataset name.  Please use Snake Case syntax:" in str(exc_info.value)
 
 
 def test_step_decorator_field_bad_name():

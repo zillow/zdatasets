@@ -2,7 +2,11 @@ import pandas as pd
 import pytest
 
 from datasets.context import Context
-from datasets.dataset_plugin import DatasetPlugin
+from datasets.dataset_plugin import (
+    DatasetPlugin,
+    _is_valid_dataset_name,
+    dataset_name_validator,
+)
 from datasets.plugins import BatchDatasetPlugin
 from datasets.tests.conftest import TestExecutor
 
@@ -36,7 +40,7 @@ class TestNameDatasetPlugin(DatasetPlugin):
 @DatasetPlugin.register_plugin(constructor_keys={"test_name", "test_name2"}, context=Context.BATCH)
 class TestName2DatasetPlugin(DatasetPlugin):
     def __init__(self, test_name: str, test_name2: str, **kwargs):
-        super(TestName2DatasetPlugin, self).__init__(name=f"{test_name}.{test_name2}", **kwargs)
+        super(TestName2DatasetPlugin, self).__init__(name=f"{test_name}_{test_name2}", **kwargs)
 
 
 @DatasetPlugin.register_plugin(constructor_keys={"test_fee"}, context=Context.ONLINE | Context.STREAMING)
@@ -68,7 +72,7 @@ def test_from_keys():
     assert isinstance(dataset, TestNameDatasetPlugin)
 
     dataset = DatasetPlugin.from_keys(test_name="t1", test_name2="t2")
-    assert dataset.name == "t1.t2"
+    assert dataset.name == "t1_t2"
     assert isinstance(dataset, TestName2DatasetPlugin)
 
     dataset = DatasetPlugin.from_keys(test_fee="test_fee", context=Context.ONLINE)
@@ -128,3 +132,13 @@ def test_register_plugin():
                 super(FooPlugin2, self).__init__(**kwargs)
 
     assert "context cannot be None" in str(execinfo.value)
+
+
+def test_is_valid_dataset_name():
+    for name in ["ds", "ds1", "ds_name", "ds_name_name2"]:
+        assert _is_valid_dataset_name(name)
+
+    for name in ["dS", "Ds", "data_Name", "_ds", "ds_", "2ds", "for", "is", "data%"]:
+        assert not _is_valid_dataset_name(name)
+
+    assert dataset_name_validator == _is_valid_dataset_name

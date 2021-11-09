@@ -33,7 +33,6 @@ class BatchDatasetPlugin(DatasetPlugin):
         columns: Optional[Union[Iterable[str], str]] = None,
         run_id: Optional[str] = None,
         mode: Mode = Mode.READ,
-        class_field_name: Optional[str] = None,
         partition_by: Optional[str] = None,
         path: Optional[str] = None,
     ):
@@ -46,7 +45,6 @@ class BatchDatasetPlugin(DatasetPlugin):
             columns=columns,
             run_id=run_id,
             mode=mode,
-            class_field_name=class_field_name,
         )
 
     def _get_path_filters_columns(
