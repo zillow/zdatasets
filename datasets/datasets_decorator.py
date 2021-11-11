@@ -1,13 +1,16 @@
 import functools
 import keyword
-from typing import Optional
+from typing import Callable, Optional
 
 from datasets import DatasetPlugin
 from datasets.context import Context
+from datasets.utils import _pascal_to_snake_case
 
 
-def dataset(name: str, field_name: Optional[str] = None, context: Optional[Context] = None, **dataset_kwargs):
-    def step_decorator(func: callable):
+def dataset(
+    name: str = None, field_name: Optional[str] = None, context: Optional[Context] = None, **dataset_kwargs
+):
+    def step_decorator(func: Callable):
         @functools.wraps(func)
         def step_wrapper(*args, **kwargs):
             self = args[0]
@@ -18,7 +21,10 @@ def dataset(name: str, field_name: Optional[str] = None, context: Optional[Conte
                     raise ValueError(f"{field_name} is not a valid Python identifier")
                 setattr(self, field_name, dataset)
             else:
-                setattr(self, name, dataset)
+                _snake_name = _pascal_to_snake_case(dataset.name)
+                if not _snake_name.isidentifier() or keyword.iskeyword(_snake_name):
+                    raise ValueError(f"{_snake_name} is not a valid Python identifier")
+                setattr(self, _snake_name, dataset)
 
             func(*args, **kwargs)
 

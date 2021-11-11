@@ -31,10 +31,10 @@ extras_require = {
 }
 
 entry_points = {
-    "datasets.executors": ["metaflow_executor = " "datasets.plugins:MetaflowExecutor"],
+    "datasets.executors": ["metaflow_executor = datasets.plugins:MetaflowExecutor"],
     "datasets.plugins": [
         "batch_dataset = datasets.plugins:BatchDatasetPlugin",
-        "batch_flow_dataset = " "datasets.plugins:BatchFlowDatasetPlugin",
+        "batch_flow_dataset = datasets.plugins:BatchFlowDatasetPlugin",
     ],
 }
 

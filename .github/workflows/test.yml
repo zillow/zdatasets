@@ -53,7 +53,7 @@ jobs:
 
     - name: Code Quality Check
       run: |
-        poetry run black datasets
+        poetry run black datasets --check
         poetry run flake8 datasets
 
     - name: Execute Python tests

@@ -7,7 +7,7 @@ from datasets import DatasetPlugin, Mode
 from datasets.context import Context
 
 
-@DatasetPlugin.register_plugin(constructor_keys={"name"}, context=Context.ONLINE)
+@DatasetPlugin.register(constructor_keys={"name"}, context=Context.ONLINE)
 class DefaultOnlineDatasetPlugin(DatasetPlugin):
     def __init__(self, keys: Optional[Union[List[str], str]] = None, **kwargs):
         if isinstance(keys, str):

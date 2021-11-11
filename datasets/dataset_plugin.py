@@ -1,10 +1,11 @@
 from __future__ import annotations
 
-import keyword
 from abc import ABC
 from typing import Callable, Dict, Iterable, Optional, Union
 
+from datasets._typing import ColumnNames
 from datasets.context import Context
+from datasets.utils import _is_upper_pascal_case
 
 from .mode import Mode
 from .program_executor import ProgramExecutor
@@ -13,7 +14,7 @@ from .program_executor import ProgramExecutor
 class DatasetPlugin(ABC):
     """
     All dataset plugins derive from this class.
-    To register as a dataset they must decorate themselves with or call DatasetPlugin.register_plugin()
+    To register as a dataset they must decorate themselves with or call DatasetPlugin.register()
     """
 
     _executor: ProgramExecutor
@@ -25,7 +26,7 @@ class DatasetPlugin(ABC):
         self,
         name: str,
         logical_key: Optional[str] = None,
-        columns: Optional[Union[Iterable[str], str]] = None,
+        columns: Optional[ColumnNames] = None,
         run_id: Optional[str] = None,
         mode: Union[Mode, str] = Mode.READ,
     ):
@@ -39,13 +40,9 @@ class DatasetPlugin(ABC):
         :param run_id: The ML Program run_id partition to select from.
         :param mode: The data access read/write mode
         """
-        if not dataset_name_validator(name):
-            raise ValueError(
-                f"'{name}' is not a valid Dataset name.  "
-                f"Please use Snake Case syntax: https://en.wikipedia.org/wiki/Snake_case"
-            )
+        dataset_name_validator(name)
         self.name = name
-        self.key = logical_key
+        self.key = logical_key  # TODO: validate this too!
         self.mode: Mode = mode if isinstance(mode, Mode) else Mode[mode]
         self.columns = columns
         self.run_id = run_id
@@ -96,7 +93,7 @@ class DatasetPlugin(ABC):
             return cls._executor.context
 
     @classmethod
-    def register_plugin(cls, constructor_keys: set[str], context: Context) -> Callable:
+    def register(cls, constructor_keys: set[str], context: Context) -> Callable:
         """
         Registration method for a dataset plugin.
         Plugins are looked up by (constructor_keys, context), so no two can be registered at the same time.
@@ -140,32 +137,24 @@ class DatasetPlugin(ABC):
     def register_executor(cls, executor: ProgramExecutor):
         cls._executor = executor
 
-    def _get_read_columns(
-        self, columns: Optional[Union[Iterable[str], str]] = None
-    ) -> Optional[Iterable[str]]:
+    def _get_read_columns(self, columns: Optional[ColumnNames] = None) -> Optional[Iterable[str]]:
         read_columns = columns if columns else self.columns
         if read_columns is not None and isinstance(read_columns, str):
             read_columns = read_columns.split(",")
         return read_columns
 
-    def __str__(self):
-        return self.__repr__()
-
     def __repr__(self):
         return f"DatasetPlugin({self.name=},{self.mode=},{self.key=},{self.columns=})"
 
 
-def _is_valid_dataset_name(name: str) -> bool:
-    is_valid = (
-        name.isidentifier()
-        and (not keyword.iskeyword(name))
-        and (name == name.lower())
-        and name[0].isalpha()  # doesn't start with underscore or number
-        and name[-1].isalnum()  # doesn't end with underscore
-        and all(x == "_" or x.isalnum() for x in name)
-    )
-
-    return is_valid
+def _validate_dataset_name(name: str):
+    if not _is_upper_pascal_case(name):
+        raise ValueError(
+            f"'{name}' is not a valid Dataset name.  "
+            f"Please use Upper Pascal Case syntax: https://en.wikipedia.org/wiki/Camel_case"
+        )
+    else:
+        pass
 
 
-dataset_name_validator: callable = _is_valid_dataset_name
+dataset_name_validator: Callable = _validate_dataset_name

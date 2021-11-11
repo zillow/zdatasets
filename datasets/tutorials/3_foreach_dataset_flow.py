@@ -17,10 +17,10 @@ class ForeachDatasetFlow(FlowSpec):
         self.next(self.foreach_split, foreach="regions")
 
     @dataset(
-        name="my_dataset_foreach",
+        name="MyDataset",
         path=my_dataset_foreach_path,
         partition_by="region",
-        mode=Mode.WRITE,
+        mode=Mode.READ_WRITE,
     )
     @step
     def foreach_split(self):
@@ -31,20 +31,20 @@ class ForeachDatasetFlow(FlowSpec):
         print(f"saving: {self.input=}")
 
         # Example of writing to a dataset with a path within a foreach split
-        self.my_dataset_foreach.write(df)
+        self.my_dataset.write(df)
 
         self.next(self.join_step)
 
     @step
     def join_step(self, inputs):
-        self.merge_artifacts(inputs, include=["my_dataset_foreach"])
+        self.merge_artifacts(inputs, include=["my_dataset"])
         self.next(self.end)
 
     @step
     def end(self):
-        print(f"I have datasets \n{self.my_dataset_foreach=}\n")
+        print(f"I have datasets \n{self.my_dataset=}\n")
         print(
-            self.my_dataset_foreach.read_pandas().to_string(index=False),
+            self.my_dataset.read_pandas().to_string(index=False),
         )
 
 

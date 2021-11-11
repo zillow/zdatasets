@@ -33,28 +33,24 @@ def test_hello_plugin_flow():
 
 def test_consistent_flow():
     run_flow("tutorials/5_consistent_flow.py")
-
-
-def test_consistent_flow_():
-    run_flow("tutorials/5_consistent_flow.py")
     run_flow("tutorials/5_consistent_flow.py", context="ONLINE")
     run_flow(
         "tutorials/5_consistent_flow.py",
-        ["--hello_ds", '{"name": "hello_ds", "mode": "WRITE", "columns": "value"}'],
+        ["--hello_ds", '{"name": "HelloDs", "mode": "WRITE", "columns": "value"}'],
     )
     run_flow(
         "tutorials/5_consistent_flow.py",
-        ["--hello_ds", '{"name": "hello_ds", "mode": "WRITE", "columns": "value"}'],
+        ["--hello_ds", '{"name": "HelloDs", "mode": "WRITE", "columns": "value"}'],
         context="ONLINE",
     )
     run_flow(
         "tutorials/5_consistent_flow.py",
-        ["--hello_ds", '{"name": "hello_ds", "mode": "WRITE", "columns": "value"}'],
+        ["--hello_ds", '{"name": "HelloDs", "mode": "WRITE", "columns": "value"}'],
         context="ONLINE",
     )
     run_flow(
         "tutorials/5_consistent_flow.py",
-        ["--hello_ds", '{"name": "hello_ds", "mode": "WRITE", "keys": "secret"}'],
+        ["--hello_ds", '{"name": "HelloDs", "mode": "WRITE", "keys": "secret"}'],
         context="ONLINE",
     )
 
