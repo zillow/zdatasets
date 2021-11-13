@@ -6,11 +6,11 @@ from datasets import DatasetType, Mode
 
 # Can also invoke from CLI:
 #  > python datasets/tutorials/0_hello_dataset_flow.py run \
-#    --hello_dataset '{"name": "foo", "partition_by": "region", "mode": "WRITE"}'
+#    --hello_dataset '{"name": "HelloDataset", "partition_by": "region", "mode": "READ_WRITE"}'
 class HelloDatasetFlow(FlowSpec):
     hello_dataset = Parameter(  # immutable
         "hello_dataset",
-        default=dict(name="hello_dataset", partition_by="region", mode=Mode.WRITE),
+        default=dict(name="HelloDataset", partition_by="region", mode=Mode.READ_WRITE),
         type=DatasetType,
     )
 

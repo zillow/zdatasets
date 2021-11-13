@@ -28,7 +28,9 @@ class ConsistentFlow(FlowSpec):
     """
 
     hello_ds = Parameter(
-        name="hello_ds", type=DatasetType, default=dict(name="hello_ds", columns="key,value", mode=Mode.WRITE)
+        name="hello_ds",
+        type=DatasetType,
+        default=dict(name="HelloDs", columns="key,value", mode=Mode.READ_WRITE),
     )
 
     @step

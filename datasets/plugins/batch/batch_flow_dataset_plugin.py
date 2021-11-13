@@ -1,5 +1,6 @@
-from typing import TYPE_CHECKING, Iterable, Optional, Tuple, Union
+from typing import TYPE_CHECKING, Optional, Tuple
 
+from datasets._typing import ColumnNames
 from datasets.context import Context
 from datasets.dataset_plugin import DatasetPlugin
 from datasets.plugins import BatchDatasetPlugin
@@ -9,16 +10,20 @@ if TYPE_CHECKING:
     from metaflow import Run
 
 
-@DatasetPlugin.register_plugin(constructor_keys={"flow_dataset"}, context=Context.BATCH)
+@DatasetPlugin.register(constructor_keys={"flow_dataset"}, context=Context.BATCH)
 class BatchFlowDatasetPlugin(BatchDatasetPlugin):
     def __init__(
         self,
         flow_dataset: str,
         name: str = None,
-        columns: Optional[Union[Iterable[str], str]] = None,
+        columns: Optional[ColumnNames] = None,
         run_id: Optional[str] = "latest_successful_run",
-        class_field_name: Optional[str] = None,
     ):
+        if name:
+            ValueError(
+                "You cannot specify the logical name of a Dataset already created and named. "
+                "Maybe you are looking for 'field_name'?"
+            )
 
         self.flow_dataset = flow_dataset
         self.flow_name, self.dataset_name = flow_dataset.split(".")
@@ -32,7 +37,6 @@ class BatchFlowDatasetPlugin(BatchDatasetPlugin):
             logical_key=dataset.key,
             columns=columns,
             run_id=run_id,
-            class_field_name=class_field_name if class_field_name else (name if name else self.dataset_name),
         )
         # The program name is that of the original dataset name
         self.program_name = dataset.program_name

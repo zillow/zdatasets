@@ -27,21 +27,21 @@ install_requires = [
 extras_require = {
     ':extra == "dask"': ["dask>=2021.9.1,<2022.0.0"],
     ':extra == "spark"': ["pyspark>=3.0.0,<4.0.0"],
-    ':extra == "metaflow"': ["zillow-metaflow @ " "git+https://github.com/zillow/metaflow.git@tz/coverage"],
+    ':extra == "metaflow"': ["zillow-metaflow @ " "git+https://github.com/zillow/metaflow.git@feature/kfp"],
 }
 
 entry_points = {
-    "datasets.executors": ["metaflow_executor = " "datasets.plugins:MetaflowExecutor"],
+    "datasets.executors": ["metaflow_executor = datasets.plugins:MetaflowExecutor"],
     "datasets.plugins": [
         "batch_dataset = datasets.plugins:BatchDatasetPlugin",
-        "batch_flow_dataset = " "datasets.plugins:BatchFlowDatasetPlugin",
+        "batch_flow_dataset = datasets.plugins:BatchFlowDatasetPlugin",
     ],
 }
 
 setup_kwargs = {
     "name": "zdatasets",
     "version": "0.0.1",
-    "description": "Dataset SDK for consistent read/write [batch, online, streaming] data for ML Programs.",
+    "description": "Dataset SDK for consistent read/write [batch, online, streaming] data.",
     "author": "Taleb Zeghmi",
     "packages": packages,
     "package_data": package_data,

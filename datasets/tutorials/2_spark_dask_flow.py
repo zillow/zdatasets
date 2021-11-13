@@ -5,7 +5,7 @@ from datasets import dataset
 
 
 class SparkDaskFlow(FlowSpec):
-    @dataset(name="io_dataset", flow_dataset="InputOutputDatasetFlow.output_dataset")
+    @dataset(flow_dataset="InputOutputDatasetFlow.output_dataset", field_name="io_dataset")
     @step
     def start(self):
         print(f"I have dataset \n{self.io_dataset=}")

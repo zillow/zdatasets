@@ -8,3 +8,4 @@ class Mode(Flag):
 
     READ = auto()
     WRITE = auto()
+    READ_WRITE = READ | WRITE

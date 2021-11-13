@@ -3,7 +3,9 @@ from __future__ import annotations
 from abc import ABC
 from typing import Callable, Dict, Iterable, Optional, Union
 
+from datasets._typing import ColumnNames
 from datasets.context import Context
+from datasets.utils import _is_upper_pascal_case
 
 from .mode import Mode
 from .program_executor import ProgramExecutor
@@ -12,7 +14,7 @@ from .program_executor import ProgramExecutor
 class DatasetPlugin(ABC):
     """
     All dataset plugins derive from this class.
-    To register as a dataset they must decorate themselves with or call DatasetPlugin.register_plugin()
+    To register as a dataset they must decorate themselves with or call DatasetPlugin.register()
     """
 
     _executor: ProgramExecutor
@@ -24,10 +26,9 @@ class DatasetPlugin(ABC):
         self,
         name: str,
         logical_key: Optional[str] = None,
-        columns: Optional[Union[Iterable[str], str]] = None,
+        columns: Optional[ColumnNames] = None,
         run_id: Optional[str] = None,
         mode: Union[Mode, str] = Mode.READ,
-        class_field_name: Optional[str] = None,
     ):
         """
 
@@ -36,25 +37,20 @@ class DatasetPlugin(ABC):
             The logical primary key, strongly suggested, and can later be
             used when creating Hive/Dynamo tables or registering with a Catalog.
         :param columns: Fetch columns
-        :param run_id: The ML Program run_id partition to select from.
+        :param run_id: The program run_id partition to select from.
         :param mode: The data access read/write mode
-        :param class_field_name:
-            To be used by @dataset decorator to set the class
-            self.`class_field_name` field name, otherwise sets self.`name` as the class name
         """
+        dataset_name_validator(name)
         self.name = name
-        self.key = logical_key
+        self.key = logical_key  # TODO: validate this too!
         self.mode: Mode = mode if isinstance(mode, Mode) else Mode[mode]
         self.columns = columns
         self.run_id = run_id
-        self._class_field_name = class_field_name
-        if not self._class_field_name:
-            self._class_field_name = name
 
     @classmethod
     def from_keys(cls, context: Optional[Union[Context, str]] = None, **kwargs) -> DatasetPlugin:
         """
-        This is the factory method for datasets. Not directly used by the user.
+        Factory method for datasets. Not directly used by the user.
         For example usage please see test_from_keys*() unit tests.
 
         :param context: If not specified it uses the current executor context.
@@ -97,7 +93,7 @@ class DatasetPlugin(ABC):
             return cls._executor.context
 
     @classmethod
-    def register_plugin(cls, constructor_keys: set[str], context: Context) -> Callable:
+    def register(cls, constructor_keys: set[str], context: Context) -> Callable:
         """
         Registration method for a dataset plugin.
         Plugins are looked up by (constructor_keys, context), so no two can be registered at the same time.
@@ -141,16 +137,24 @@ class DatasetPlugin(ABC):
     def register_executor(cls, executor: ProgramExecutor):
         cls._executor = executor
 
-    def _get_read_columns(
-        self, columns: Optional[Union[Iterable[str], str]] = None
-    ) -> Optional[Iterable[str]]:
+    def _get_read_columns(self, columns: Optional[ColumnNames] = None) -> Optional[Iterable[str]]:
         read_columns = columns if columns else self.columns
         if read_columns is not None and isinstance(read_columns, str):
             read_columns = read_columns.split(",")
         return read_columns
 
-    def __str__(self):
-        return self.__repr__()
-
     def __repr__(self):
         return f"DatasetPlugin({self.name=},{self.mode=},{self.key=},{self.columns=})"
+
+
+def _validate_dataset_name(name: str):
+    if not _is_upper_pascal_case(name):
+        raise ValueError(
+            f"'{name}' is not a valid Dataset name.  "
+            f"Please use Upper Pascal Case syntax: https://en.wikipedia.org/wiki/Camel_case"
+        )
+    else:
+        pass
+
+
+dataset_name_validator: Callable = _validate_dataset_name

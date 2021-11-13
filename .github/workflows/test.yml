@@ -4,7 +4,7 @@ on:
     branches:
     - main
     - feature/datasets
-    - tz/pypi
+    - tz/aip-5368-build-fix
   pull_request:
     branches:
     - main
@@ -31,29 +31,29 @@ jobs:
         pip install --upgrade pip
         pip install poetry coveragepy-lcov
 
-    - name: Cache Poetry virtualenv
-      uses: actions/cache@v1
-      id: cache
-      with:
-        path: ~/.virtualenvs
-        key: poetry-${{ hashFiles('**/poetry.lock') }}
-        restore-keys: |
-          poetry-${{ hashFiles('**/poetry.lock') }}
+    - name: Configure poetry
+      run: poetry config virtualenvs.in-project true
 
-    - name: Set Poetry config
-      run: |
-        poetry config virtualenvs.in-project false
-        poetry config virtualenvs.path ~/.virtualenvs
+    - name: Setup Cache Poetry virtualenv
+      uses: actions/cache@v1
+      id: cached-poetry-dependencies
+      with:
+        path: .venv
+        key: venv-${{ runner.os }}-${{ hashFiles('**/poetry.lock') }}-${{ hashFiles('.github/workflows/test.yml') }}
+
+    - name: Ensure cache is healthy
+      if: steps.cached-poetry-dependencies.outputs.cache-hit == 'true'
+      run: poetry run pip --version >/dev/null 2>&1 || rm -rf .venv
 
     - name: Install Dependencies
+      if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
       run: |
         poetry install -E dask -E spark
         poetry run pip install --upgrade git+https://github.com/zillow/metaflow.git@feature/kfp
-      if: steps.cache.outputs.cache-hit != 'true'
 
     - name: Code Quality Check
       run: |
-        poetry run black datasets
+        poetry run black datasets --check
         poetry run flake8 datasets
 
     - name: Execute Python tests
