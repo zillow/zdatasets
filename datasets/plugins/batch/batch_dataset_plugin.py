@@ -305,9 +305,9 @@ class BatchDatasetPlugin(DatasetPlugin):
             self.run_id = self._executor.current_run_id  # DO NOT ALLOW OVERWRITE OF ANOTHER RUN ID
             df = df.withColumn("run_id", lit(self.run_id))
 
-        df.write.options(**kwargs).parquet(
+        # TODO: should mode=overwrite be the default policy??
+        df.write.options(**kwargs).mode(kwargs.get("mode", "overwrite")).parquet(
             path=self._get_dataset_path(),
-            mode=kwargs.get("mode", "overwrite"),  # TODO: should this be the default policy??
             partitionBy=partition_cols,
             compression=kwargs.get("compression", "snappy"),
         )
