@@ -5,7 +5,7 @@ from datasets.context import Context
 
 class ProgramExecutor(ABC):
     """
-    Class to access information about the ML program currently being executed.
+    Class to access information about the program currently being executed.
     """
 
     @property

@@ -37,7 +37,7 @@ class DatasetPlugin(ABC):
             The logical primary key, strongly suggested, and can later be
             used when creating Hive/Dynamo tables or registering with a Catalog.
         :param columns: Fetch columns
-        :param run_id: The ML Program run_id partition to select from.
+        :param run_id: The program run_id partition to select from.
         :param mode: The data access read/write mode
         """
         dataset_name_validator(name)
@@ -50,7 +50,7 @@ class DatasetPlugin(ABC):
     @classmethod
     def from_keys(cls, context: Optional[Union[Context, str]] = None, **kwargs) -> DatasetPlugin:
         """
-        This is the factory method for datasets. Not directly used by the user.
+        Factory method for datasets. Not directly used by the user.
         For example usage please see test_from_keys*() unit tests.
 
         :param context: If not specified it uses the current executor context.
