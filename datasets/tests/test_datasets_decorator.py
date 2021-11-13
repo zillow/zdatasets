@@ -44,8 +44,9 @@ def test_step_decorator_class_bad_name():
         foo = Foo()
         foo.hi()
 
-    assert f"'{bad_name}' is not a valid Dataset name.  Please use Upper Pascal Case syntax:" in str(
-        exc_info.value
+    assert (
+        f"'{bad_name}' is not a valid Dataset name.  Please use Upper Pascal Case syntax:"
+        in str(exc_info.value)
     )
 
 

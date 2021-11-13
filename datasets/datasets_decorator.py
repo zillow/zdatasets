@@ -8,7 +8,10 @@ from datasets.utils import _pascal_to_snake_case
 
 
 def dataset(
-    name: str = None, field_name: Optional[str] = None, context: Optional[Context] = None, **dataset_kwargs
+    name: str = None,
+    field_name: Optional[str] = None,
+    context: Optional[Context] = None,
+    **dataset_kwargs,
 ):
     def step_decorator(func: Callable):
         @functools.wraps(func)

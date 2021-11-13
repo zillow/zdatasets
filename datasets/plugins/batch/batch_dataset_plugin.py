@@ -1,5 +1,13 @@
 from pathlib import Path
-from typing import TYPE_CHECKING, Callable, Iterable, List, Optional, Tuple, Union
+from typing import (
+    TYPE_CHECKING,
+    Callable,
+    Iterable,
+    List,
+    Optional,
+    Tuple,
+    Union,
+)
 
 import pandas
 import pandas as pd
@@ -10,8 +18,8 @@ from datasets.context import Context
 from datasets.data_container_type import DataContainerType
 from datasets.dataset_plugin import DatasetPlugin
 from datasets.exceptions import InvalidOperationException
-from datasets.utils import _pascal_to_snake_case
 from datasets.plugins.batch.config import BATCH_DEFAULT_CONTAINER
+from datasets.utils import _pascal_to_snake_case
 
 
 if TYPE_CHECKING:
@@ -147,7 +155,7 @@ class BatchDatasetPlugin(DatasetPlugin):
     ) -> "SparkDataFrame":
         if not (self.mode & Mode.READ):
             raise InvalidOperationException(f"Cannot read because mode={self.mode}")
-        
+
         from pyspark import SparkConf
         from pyspark.sql import DataFrame, SparkSession
 
@@ -205,10 +213,10 @@ class BatchDatasetPlugin(DatasetPlugin):
                 " Or PySpark or Dask is not installed."
             )
 
-    def write_dask(self, df: "dd.DataFrame", **kwargs):
+    def write_dask(self, df: "dd.DataFrame", partition_by: Optional[ColumnNames] = None, **kwargs):
         import dask.dataframe as dd
 
-        partition_cols = self._write_data_frame_prep(df)
+        partition_cols = self._write_data_frame_prep(df, partition_by=partition_by)
         dd.to_parquet(
             df,
             self.dataset_path,
@@ -220,8 +228,8 @@ class BatchDatasetPlugin(DatasetPlugin):
             **kwargs,
         )
 
-    def write_pandas(self, df: pd.DataFrame, **kwargs):
-        partition_cols = self._write_data_frame_prep(df)
+    def write_pandas(self, df: pd.DataFrame, partition_by: Optional[ColumnNames] = None, **kwargs):
+        partition_cols = self._write_data_frame_prep(df, partition_by=partition_by)
         df.to_parquet(
             self._get_dataset_path(),
             engine=kwargs.get("engine", "pyarrow"),
@@ -231,18 +239,25 @@ class BatchDatasetPlugin(DatasetPlugin):
             **kwargs,
         )
 
-    def _write_data_frame_prep(self, df: Union[pd.DataFrame, "dd.DataFrame"]) -> List[str]:
+    def _partition_by_to_list(self, partition_by: Optional[ColumnNames] = None) -> List[str]:
+        def to_list(partitions: Optional[ColumnNames]) -> List[str]:
+            if partitions:
+                if isinstance(partitions, str):
+                    return partitions.split(",")
+                else:
+                    return partitions
+            else:
+                return list()
+
+        return to_list(partition_by) if partition_by else to_list(self.partition_by)
+
+    def _write_data_frame_prep(
+        self, df: Union[pd.DataFrame, "dd.DataFrame"], partition_by: Optional[ColumnNames] = None
+    ) -> List[str]:
         if not (self.mode & Mode.WRITE):
             raise InvalidOperationException(f"Cannot write because mode={self.mode}")
 
-        partition_cols: List[str] = []
-        if self.partition_by:
-            if isinstance(self.partition_by, str):
-                partition_cols = self.partition_by.split(",")
-            else:
-                partition_cols = self.partition_by
-        else:
-            partition_cols = list()
+        partition_cols: List[str] = self._partition_by_to_list(partition_by)
 
         if self.path is None or "run_id" in partition_cols:
             # Only partition on run_id if @dataset(path="s3://..") is not given
@@ -263,19 +278,24 @@ class BatchDatasetPlugin(DatasetPlugin):
                 df["run_id"] = self.run_id
         return partition_cols
 
-    def write_spark_pandas(self, df: "ps.DataFrame", **kwargs):
-        self.write_spark(df.to_spark(index_col=kwargs.get("index_col", None)), **kwargs)
+    def write_spark_pandas(
+        self, df: "ps.DataFrame", partition_by: Optional[ColumnNames] = None, **kwargs
+    ):
+        self.write_spark(
+            df.to_spark(index_col=kwargs.get("index_col", None)),
+            partition_by=partition_by,
+            **kwargs,
+        )
 
-    def write_spark(self, df: "SparkDataFrame", **kwargs):
+    def write_spark(
+        self, df: "SparkDataFrame", partition_by: Optional[ColumnNames] = None, **kwargs
+    ):
         from pyspark.sql.functions import lit
 
         if not (self.mode & Mode.WRITE):
             raise InvalidOperationException(f"Cannot write because mode={self.mode}")
 
-        if self.partition_by:
-            partition_cols = self.partition_by.split(",")
-        else:
-            partition_cols = list()
+        partition_cols: List[str] = self._partition_by_to_list(partition_by)
 
         if self.path is None or "run_id" in partition_cols:
             # Only partition on run_id if @dataset(path="s3://..") is not given
@@ -306,7 +326,11 @@ class BatchDatasetPlugin(DatasetPlugin):
                 return str(
                     Path(self._executor.datastore_path)
                     / "datastore"
-                    / (self.program_name if self.program_name else self._executor.current_program_name)
+                    / (
+                        self.program_name
+                        if self.program_name
+                        else self._executor.current_program_name
+                    )
                     / self._table_name
                 )
 

@@ -143,4 +143,4 @@ def test_default_read(dataset: BatchDatasetPlugin, df: pd.DataFrame, spark_sessi
 
     assert isinstance(read_psdf, ps.DataFrame)
     read_df = read_psdf.to_pandas()
-    assert_frame_equal(df, read_df, check_like=True)
+    assert_frame_equal(df.set_index("col2"), read_df.set_index("col2"), check_like=True)
