@@ -37,13 +37,6 @@ jobs:
       with:
         path: .venv
         key: venv-${{ runner.os }}-${{ hashFiles('**/poetry.lock') }}-${{ hashFiles('.github/workflows/test.yml') }}
-#        restore-keys: |
-#          poetry-${{ hashFiles('**/poetry.lock') }}
-
-#    - name: Set Poetry config
-#      run: |
-#        poetry config virtualenvs.in-project false
-#        poetry config virtualenvs.path ~/.virtualenvs
 
     - name: Install Dependencies
       if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
