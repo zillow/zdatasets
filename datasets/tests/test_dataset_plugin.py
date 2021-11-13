@@ -8,41 +8,41 @@ from datasets.tests.conftest import TestExecutor
 
 
 @DatasetPlugin.register(constructor_keys={"name"}, context=Context.STREAMING)
-class TestDefaultStreamingDatasetPlugin(DatasetPlugin):
+class DefaultStreamingDatasetPluginTest(DatasetPlugin):
     def __init__(self, **kwargs):
-        super(TestDefaultStreamingDatasetPlugin, self).__init__(**kwargs)
+        super(DefaultStreamingDatasetPluginTest, self).__init__(**kwargs)
 
 
 @DatasetPlugin.register(constructor_keys={"name"}, context=Context.ONLINE)
-class TestDefaultOnlineDatasetPlugin(DatasetPlugin):
+class DefaultOnlineDatasetPluginTest(DatasetPlugin):
     def __init__(self, **kwargs):
-        super(TestDefaultOnlineDatasetPlugin, self).__init__(**kwargs)
+        super(DefaultOnlineDatasetPluginTest, self).__init__(**kwargs)
 
 
 @DatasetPlugin.register(constructor_keys={"test_name"}, context=Context.BATCH)
-class TestNameDatasetPlugin(DatasetPlugin):
+class NameDatasetPluginTest(DatasetPlugin):
     db = pd.DataFrame(
         {"key": ["first", "second", "third", "fourth"], "value": [1, 2, 3, 4]},
     )
     db.set_index("key")
 
     def __init__(self, test_name: str, **kwargs):
-        super(TestNameDatasetPlugin, self).__init__(name=test_name, **kwargs)
+        super(NameDatasetPluginTest, self).__init__(name=test_name, **kwargs)
 
     def read(self, key):
         return self.db[self.db.key.isin(key)]
 
 
 @DatasetPlugin.register(constructor_keys={"test_name", "test_name2"}, context=Context.BATCH)
-class TestName2DatasetPlugin(DatasetPlugin):
+class Name2DatasetPluginTest(DatasetPlugin):
     def __init__(self, test_name: str, test_name2: str, **kwargs):
-        super(TestName2DatasetPlugin, self).__init__(name=f"{test_name}{test_name2}", **kwargs)
+        super(Name2DatasetPluginTest, self).__init__(name=f"{test_name}{test_name2}", **kwargs)
 
 
 @DatasetPlugin.register(constructor_keys={"test_fee"}, context=Context.ONLINE | Context.STREAMING)
-class TestFeeOnlineDatasetPlugin(DatasetPlugin):
+class FeeOnlineDatasetPluginTest(DatasetPlugin):
     def __init__(self, test_fee: str, **kwargs):
-        super(TestFeeOnlineDatasetPlugin, self).__init__(name=test_fee, **kwargs)
+        super(FeeOnlineDatasetPluginTest, self).__init__(name=test_fee, **kwargs)
 
 
 def test_from_keys_dataset_factory_latency():
@@ -55,7 +55,7 @@ def test_from_keys_dataset_factory_latency():
     assert c.microseconds < 500  # less than 0.5 ms, it actually takes ~24 microseconds
 
     assert dataset.name == "Foo"
-    assert isinstance(dataset, TestNameDatasetPlugin)
+    assert isinstance(dataset, NameDatasetPluginTest)
 
 
 def test_from_keys():
@@ -65,22 +65,22 @@ def test_from_keys():
     dataset = DatasetPlugin.from_keys(test_name="Foo")
     assert dataset.name == "Foo"
     assert dataset.read(["first", "fourth"])["value"].to_list() == [1, 4]
-    assert isinstance(dataset, TestNameDatasetPlugin)
+    assert isinstance(dataset, NameDatasetPluginTest)
 
     dataset = DatasetPlugin.from_keys(test_name="Ta", test_name2="Tb")
     assert dataset.name == "TaTb"
-    assert isinstance(dataset, TestName2DatasetPlugin)
+    assert isinstance(dataset, Name2DatasetPluginTest)
 
     dataset = DatasetPlugin.from_keys(test_fee="TestFee", context=Context.ONLINE)
     assert dataset.name == "TestFee"
-    assert isinstance(dataset, TestFeeOnlineDatasetPlugin)
+    assert isinstance(dataset, FeeOnlineDatasetPluginTest)
 
     dataset = DatasetPlugin.from_keys(test_fee="TestFee", context=Context.STREAMING)
     assert dataset.name == "TestFee"
-    assert isinstance(dataset, TestFeeOnlineDatasetPlugin)
+    assert isinstance(dataset, FeeOnlineDatasetPluginTest)
 
     dataset = DatasetPlugin.from_keys(test_fee="TestFee", context="STREAMING")
-    assert isinstance(dataset, TestFeeOnlineDatasetPlugin)
+    assert isinstance(dataset, FeeOnlineDatasetPluginTest)
 
 
 def test_from_keys_consistent_access():
@@ -91,12 +91,12 @@ def test_from_keys_consistent_access():
     TestExecutor.current_context = Context.STREAMING
     dataset = DatasetPlugin.from_keys(name="Foo")
     assert dataset.name == "Foo"
-    assert isinstance(dataset, TestDefaultStreamingDatasetPlugin)
+    assert isinstance(dataset, DefaultStreamingDatasetPluginTest)
 
     TestExecutor.current_context = Context.ONLINE
     dataset = DatasetPlugin.from_keys(name="Foo")
     assert dataset.name == "Foo"
-    assert isinstance(dataset, TestDefaultOnlineDatasetPlugin)
+    assert isinstance(dataset, DefaultOnlineDatasetPluginTest)
 
     TestExecutor.current_context = Context.BATCH
 

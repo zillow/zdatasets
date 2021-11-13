@@ -4,11 +4,11 @@ on:
     branches:
     - main
     - feature/datasets
-    - tz/aip-5368-build-fix
   pull_request:
     branches:
     - main
     - feature/datasets
+    - tz/spark_pandas
 jobs:
   test:
     name: ${{ matrix.lang }} tests on ${{ matrix.os }}
