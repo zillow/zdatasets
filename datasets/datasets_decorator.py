@@ -22,8 +22,6 @@ def dataset(
                 setattr(self, field_name, dataset)
             else:
                 _snake_name = _pascal_to_snake_case(dataset.name)
-                if not _snake_name.isidentifier() or keyword.iskeyword(_snake_name):
-                    raise ValueError(f"{_snake_name} is not a valid Python identifier")
                 setattr(self, _snake_name, dataset)
 
             func(*args, **kwargs)
