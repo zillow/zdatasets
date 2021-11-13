@@ -48,6 +48,9 @@ jobs:
         poetry install -E dask -E spark
         poetry run pip install --upgrade git+https://github.com/zillow/metaflow.git@feature/kfp
 
+    - name: Poetry env info
+      run: poetry env info
+
     - name: Code Quality Check
       run: |
         poetry run black datasets --check
