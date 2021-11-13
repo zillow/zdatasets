@@ -38,6 +38,10 @@ jobs:
         path: .venv
         key: venv-${{ runner.os }}-${{ hashFiles('**/poetry.lock') }}-${{ hashFiles('.github/workflows/test.yml') }}
 
+    - name: Ensure cache is healthy
+      if: steps.cached-poetry-dependencies.outputs.cache-hit == 'true'
+      run: poetry run pip --version >/dev/null 2>&1 || rm -rf .venv
+
     - name: Install Dependencies
       if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
       run: |
