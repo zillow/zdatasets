@@ -37,7 +37,7 @@ class DatasetPlugin(ABC):
             The logical primary key, strongly suggested, and can later be
             used when creating Hive/Dynamo tables or registering with a Catalog.
         :param columns: Fetch columns
-        :param run_id: The ML Program run_id partition to select from.
+        :param run_id: The program run_id partition to select from.
         :param mode: The data access read/write mode
         """
         dataset_name_validator(name)
