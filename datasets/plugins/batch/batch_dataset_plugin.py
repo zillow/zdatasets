@@ -20,7 +20,7 @@ if TYPE_CHECKING:
 @DatasetPlugin.register(constructor_keys={"name"}, context=Context.BATCH)
 class BatchDatasetPlugin(DatasetPlugin):
     """
-    This is the default plugin for the BATCH execution context.
+    The default plugin for the BATCH execution context.
     """
 
     _dataset_path_func: Callable = None
