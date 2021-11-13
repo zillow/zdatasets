@@ -50,7 +50,7 @@ class DatasetPlugin(ABC):
     @classmethod
     def from_keys(cls, context: Optional[Union[Context, str]] = None, **kwargs) -> DatasetPlugin:
         """
-        This is the factory method for datasets. Not directly used by the user.
+        Factory method for datasets. Not directly used by the user.
         For example usage please see test_from_keys*() unit tests.
 
         :param context: If not specified it uses the current executor context.
