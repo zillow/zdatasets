@@ -66,9 +66,7 @@ class DatasetPlugin(ABC):
         ret_plugin = None
 
         for plugin_context in (
-            plugin_context
-            for plugin_context in cls._plugins.keys()
-            if context_lookup & plugin_context
+            plugin_context for plugin_context in cls._plugins.keys() if context_lookup & plugin_context
         ):
             for plugin_constructor_keys, plugin in cls._plugins[plugin_context].items():
                 if plugin_constructor_keys.issubset(dataset_args):

@@ -135,7 +135,6 @@ def test_is_valid_dataset_name():
     with pytest.raises(ValueError) as exec_info:
         DatasetPlugin.from_keys(name=bad_name)
 
-    assert (
-        f"'{bad_name}' is not a valid Dataset name.  Please use Upper Pascal Case syntax:"
-        in str(exec_info.value)
+    assert f"'{bad_name}' is not a valid Dataset name.  Please use Upper Pascal Case syntax:" in str(
+        exec_info.value
     )

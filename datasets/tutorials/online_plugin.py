@@ -25,9 +25,7 @@ class DefaultOnlineDatasetPlugin(DatasetPlugin):
     def read(self, keys: Optional[List[str]] = None, columns: Optional[str] = None) -> pd.DataFrame:
         return self.read_pandas(keys=keys, columns=columns)
 
-    def read_pandas(
-        self, keys: Optional[List[str]] = None, columns: Optional[str] = None
-    ) -> pd.DataFrame:
+    def read_pandas(self, keys: Optional[List[str]] = None, columns: Optional[str] = None) -> pd.DataFrame:
         read_columns = self._get_read_columns(columns)
 
         print(type(self.keys), f"{self.keys=}")

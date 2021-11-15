@@ -169,32 +169,23 @@ class BatchDatasetPlugin(DatasetPlugin):
             conf = SparkConf()
         spark_session: SparkSession = SparkSession.builder.config(conf=conf).getOrCreate()
 
-        df: DataFrame = spark_session.read.load(path, format=storage_format, **kwargs).select(
-            *read_columns
-        )
+        df: DataFrame = spark_session.read.load(path, format=storage_format, **kwargs).select(*read_columns)
         for name, op, val in filters:
             df = df.where(df[name] == val)
 
         for meta_column in self._META_COLUMNS:
-            if meta_column in df.columns and (
-                read_columns is None or meta_column not in read_columns
-            ):
+            if meta_column in df.columns and (read_columns is None or meta_column not in read_columns):
                 df = df.drop(meta_column)
         return df
 
-    def write(
-        self, data: Union[pd.DataFrame, "ps.DataFrame", "SparkDataFrame", "dd.DataFrame"], **kwargs
-    ):
+    def write(self, data: Union[pd.DataFrame, "ps.DataFrame", "SparkDataFrame", "dd.DataFrame"], **kwargs):
         # TODO: what should we do if the type doesn't match with BATCH_DEFAULT_CONTAINER?
         #   -  Should we force writes through the BATCH_DEFAULT_CONTAINER??
         if isinstance(data, pd.DataFrame):
             if DataContainerType.SPARK_PANDAS == BATCH_DEFAULT_CONTAINER:
                 from pyspark import pandas as ps
 
-                print(
-                    "<< Converting the Pandas DataFrame to Spark DataFrame "
-                    "then write using Spark >>"
-                )
+                print("<< Converting the Pandas DataFrame to Spark DataFrame " "then write using Spark >>")
                 psdf: ps.DataFrame = ps.from_pandas(data)
                 return self.write_spark_pandas(psdf, **kwargs)
             else:
@@ -209,8 +200,7 @@ class BatchDatasetPlugin(DatasetPlugin):
             return self.write_dask(data, **kwargs)
         else:
             raise ValueError(
-                f"data is of unsupported type {type(data)=}."
-                " Or PySpark or Dask is not installed."
+                f"data is of unsupported type {type(data)=}." " Or PySpark or Dask is not installed."
             )
 
     def write_dask(self, df: "dd.DataFrame", partition_by: Optional[ColumnNames] = None, **kwargs):
@@ -278,18 +268,14 @@ class BatchDatasetPlugin(DatasetPlugin):
                 df["run_id"] = self.run_id
         return partition_cols
 
-    def write_spark_pandas(
-        self, df: "ps.DataFrame", partition_by: Optional[ColumnNames] = None, **kwargs
-    ):
+    def write_spark_pandas(self, df: "ps.DataFrame", partition_by: Optional[ColumnNames] = None, **kwargs):
         self.write_spark(
             df.to_spark(index_col=kwargs.get("index_col", None)),
             partition_by=partition_by,
             **kwargs,
         )
 
-    def write_spark(
-        self, df: "SparkDataFrame", partition_by: Optional[ColumnNames] = None, **kwargs
-    ):
+    def write_spark(self, df: "SparkDataFrame", partition_by: Optional[ColumnNames] = None, **kwargs):
         from pyspark.sql.functions import lit
 
         if not (self.mode & Mode.WRITE):
@@ -326,11 +312,7 @@ class BatchDatasetPlugin(DatasetPlugin):
                 return str(
                     Path(self._executor.datastore_path)
                     / "datastore"
-                    / (
-                        self.program_name
-                        if self.program_name
-                        else self._executor.current_program_name
-                    )
+                    / (self.program_name if self.program_name else self._executor.current_program_name)
                     / self._table_name
                 )
 
