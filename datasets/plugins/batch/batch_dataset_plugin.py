@@ -128,6 +128,31 @@ class BatchDatasetPlugin(DatasetPlugin):
                 del df[meta_column]
         return df
 
+    def write(self, data: Union[pd.DataFrame, "ps.DataFrame", "SparkDataFrame", "dd.DataFrame"], **kwargs):
+        # TODO: what should we do if the type doesn't match with BATCH_DEFAULT_CONTAINER?
+        #   -  Should we force writes through the BATCH_DEFAULT_CONTAINER??
+        if isinstance(data, pd.DataFrame):
+            if DataContainerType.SPARK_PANDAS == BATCH_DEFAULT_CONTAINER:
+                from pyspark import pandas as ps
+
+                print("<< Converting the Pandas DataFrame to Spark DataFrame " "then write using Spark >>")
+                psdf: ps.DataFrame = ps.from_pandas(data)
+                return self.write_spark_pandas(psdf, **kwargs)
+            else:
+                return self.write_pandas(data, **kwargs)
+        elif "pyspark.pandas.frame.DataFrame" in str(type(data)):
+            return self.write_spark_pandas(data, **kwargs)
+        elif "pyspark.sql.dataframe.DataFrame" in str(type(data)):
+            return self.write_spark(data, **kwargs)
+        elif "dask.dataframe.core.DataFrame" in str(type(data)):
+            # TODO: what do we do with Dask BATCH_DEFAULT_CONTAINER == SPARK_PANDAS?
+            #   Is the onus on the Dask user?
+            return self.write_dask(data, **kwargs)
+        else:
+            raise ValueError(
+                f"data is of unsupported type {type(data)=}." " Or PySpark or Dask is not installed."
+            )
+
     def read_dask(
         self, columns: Optional[str] = None, run_id: Optional[str] = None, **kwargs
     ) -> "dd.DataFrame":
@@ -177,31 +202,6 @@ class BatchDatasetPlugin(DatasetPlugin):
             if meta_column in df.columns and (read_columns is None or meta_column not in read_columns):
                 df = df.drop(meta_column)
         return df
-
-    def write(self, data: Union[pd.DataFrame, "ps.DataFrame", "SparkDataFrame", "dd.DataFrame"], **kwargs):
-        # TODO: what should we do if the type doesn't match with BATCH_DEFAULT_CONTAINER?
-        #   -  Should we force writes through the BATCH_DEFAULT_CONTAINER??
-        if isinstance(data, pd.DataFrame):
-            if DataContainerType.SPARK_PANDAS == BATCH_DEFAULT_CONTAINER:
-                from pyspark import pandas as ps
-
-                print("<< Converting the Pandas DataFrame to Spark DataFrame " "then write using Spark >>")
-                psdf: ps.DataFrame = ps.from_pandas(data)
-                return self.write_spark_pandas(psdf, **kwargs)
-            else:
-                return self.write_pandas(data, **kwargs)
-        elif "pyspark.pandas.frame.DataFrame" in str(type(data)):
-            return self.write_spark_pandas(data, **kwargs)
-        elif "pyspark.sql.dataframe.DataFrame" in str(type(data)):
-            return self.write_spark(data, **kwargs)
-        elif "dask.dataframe.core.DataFrame" in str(type(data)):
-            # TODO: what do we do with Dask BATCH_DEFAULT_CONTAINER == SPARK_PANDAS?
-            #   Is the onus on the Dask user?
-            return self.write_dask(data, **kwargs)
-        else:
-            raise ValueError(
-                f"data is of unsupported type {type(data)=}." " Or PySpark or Dask is not installed."
-            )
 
     def write_dask(self, df: "dd.DataFrame", partition_by: Optional[ColumnNames] = None, **kwargs):
         import dask.dataframe as dd
