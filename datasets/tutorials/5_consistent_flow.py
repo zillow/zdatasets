@@ -42,13 +42,11 @@ class ConsistentFlow(FlowSpec):
         df = pd.DataFrame([{"key": "secret", "value": 42}])
         self.hello_ds.write(df)
 
-        read_df = self.hello_ds.read()
+        read_df = self.hello_ds.to_pandas()
         if DatasetPlugin._executor.context == Context.ONLINE:
             assert isinstance(self.hello_ds, DefaultOnlineDatasetPlugin)
-            assert isinstance(read_df, pd.DataFrame)
         else:
             assert isinstance(self.hello_ds, BatchDatasetPlugin)
-            assert isinstance(read_df, ps.DataFrame)
 
         print(f"{type(read_df)=}")
         print(f"{read_df=}")

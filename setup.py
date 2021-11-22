@@ -27,9 +27,7 @@ install_requires = [
 extras_require = {
     ':extra == "dask"': ["dask>=2021.9.1,<2022.0.0"],
     ':extra == "spark"': ["pyspark>=3.0.0,<4.0.0"],
-    ':extra == "metaflow"': [
-        "zillow-metaflow @ " "git+https://github.com/zillow/metaflow.git@feature/kfp"
-    ],
+    ':extra == "metaflow"': ["zillow-metaflow @ " "git+https://github.com/zillow/metaflow.git@feature/kfp"],
 }
 
 entry_points = {

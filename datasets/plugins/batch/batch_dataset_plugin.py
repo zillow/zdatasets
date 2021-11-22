@@ -15,10 +15,8 @@ import pandas as pd
 from datasets import Mode
 from datasets._typing import ColumnNames
 from datasets.context import Context
-from datasets.data_container_type import DataContainerType
 from datasets.dataset_plugin import DatasetPlugin
 from datasets.exceptions import InvalidOperationException
-from datasets.plugins.batch.config import BATCH_DEFAULT_CONTAINER
 from datasets.utils import _pascal_to_snake_case
 
 
@@ -69,35 +67,18 @@ class BatchDatasetPlugin(DatasetPlugin):
             filters = [("run_id", "=", query_run_id)]
         return path, filters, read_columns
 
-    def read(
-        self, columns: Optional[str] = None, run_id: Optional[str] = None, **kwargs
-    ) -> Union[pd.DataFrame, "ps.DataFrame", "dd.DataFrame"]:
-        if DataContainerType.SPARK_PANDAS_OR_PANDAS == BATCH_DEFAULT_CONTAINER:
-            try:
-                return self.read_spark_pandas(colums=columns, run_id=run_id, **kwargs)
-            except ImportError:
-                return self.read_pandas(colums=columns, run_id=run_id, **kwargs)
-        elif DataContainerType.SPARK_PANDAS == BATCH_DEFAULT_CONTAINER:
-            return self.read_spark_pandas(colums=columns, run_id=run_id, **kwargs)
-        elif DataContainerType.PANDAS == BATCH_DEFAULT_CONTAINER:
-            return self.read_pandas(colums=columns, run_id=run_id, **kwargs)
-        elif DataContainerType.DASK == BATCH_DEFAULT_CONTAINER:
-            return self.read_dask(colums=columns, run_id=run_id, **kwargs)
-        else:
-            raise ValueError(f"{BATCH_DEFAULT_CONTAINER} does not exist")
-
-    def read_spark_pandas(
+    def to_spark_pandas(
         self,
         columns: Optional[str] = None,
         run_id: Optional[str] = None,
         conf: Optional["SparkConf"] = None,
         **kwargs,
     ) -> "ps.DataFrame":
-        sdf: SparkDataFrame = self.read_spark(columns=columns, run_id=run_id, conf=conf, **kwargs)
+        sdf: SparkDataFrame = self.to_spark(columns=columns, run_id=run_id, conf=conf, **kwargs)
         psdf: ps.DataFrame = sdf.to_pandas_on_spark(index_col=kwargs.get("index_col", None))
         return psdf
 
-    def read_pandas(
+    def to_pandas(
         self,
         columns: Optional[str] = None,
         run_id: Optional[str] = None,
@@ -119,7 +100,7 @@ class BatchDatasetPlugin(DatasetPlugin):
                 **kwargs,
             )
         elif storage_format == "csv":
-            df = pandas.read_csv(path, columns=read_columns, filters=filters, **kwargs)
+            df = pandas.read_csv(path, usecols=read_columns, **kwargs)
         else:
             raise ValueError(f"{storage_format=} not supported.")
 
@@ -128,32 +109,7 @@ class BatchDatasetPlugin(DatasetPlugin):
                 del df[meta_column]
         return df
 
-    def write(self, data: Union[pd.DataFrame, "ps.DataFrame", "SparkDataFrame", "dd.DataFrame"], **kwargs):
-        # TODO: what should we do if the type doesn't match with BATCH_DEFAULT_CONTAINER?
-        #   -  Should we force writes through the BATCH_DEFAULT_CONTAINER??
-        if isinstance(data, pd.DataFrame):
-            if DataContainerType.SPARK_PANDAS == BATCH_DEFAULT_CONTAINER:
-                from pyspark import pandas as ps
-
-                print("<< Converting the Pandas DataFrame to Spark DataFrame " "then write using Spark >>")
-                psdf: ps.DataFrame = ps.from_pandas(data)
-                return self.write_spark_pandas(psdf, **kwargs)
-            else:
-                return self.write_pandas(data, **kwargs)
-        elif "pyspark.pandas.frame.DataFrame" in str(type(data)):
-            return self.write_spark_pandas(data, **kwargs)
-        elif "pyspark.sql.dataframe.DataFrame" in str(type(data)):
-            return self.write_spark(data, **kwargs)
-        elif "dask.dataframe.core.DataFrame" in str(type(data)):
-            # TODO: what do we do with Dask BATCH_DEFAULT_CONTAINER == SPARK_PANDAS?
-            #   Is the onus on the Dask user?
-            return self.write_dask(data, **kwargs)
-        else:
-            raise ValueError(
-                f"data is of unsupported type {type(data)=}." " Or PySpark or Dask is not installed."
-            )
-
-    def read_dask(
+    def to_dask(
         self, columns: Optional[str] = None, run_id: Optional[str] = None, **kwargs
     ) -> "dd.DataFrame":
         if not (self.mode & Mode.READ):
@@ -170,7 +126,7 @@ class BatchDatasetPlugin(DatasetPlugin):
             **kwargs,
         )
 
-    def read_spark(
+    def to_spark(
         self,
         columns: Optional[str] = None,
         run_id: Optional[str] = None,
@@ -203,31 +159,19 @@ class BatchDatasetPlugin(DatasetPlugin):
                 df = df.drop(meta_column)
         return df
 
-    def write_dask(self, df: "dd.DataFrame", partition_by: Optional[ColumnNames] = None, **kwargs):
-        import dask.dataframe as dd
-
-        partition_cols = self._write_data_frame_prep(df, partition_by=partition_by)
-        dd.to_parquet(
-            df,
-            self.dataset_path,
-            engine=kwargs.get("engine", "pyarrow"),
-            compression=kwargs.get("compression", "snappy"),
-            partition_on=partition_cols,
-            write_index=kwargs.get("write_index", False),
-            write_metadata_file=kwargs.get("write_metadata_file", False),
-            **kwargs,
-        )
-
-    def write_pandas(self, df: pd.DataFrame, partition_by: Optional[ColumnNames] = None, **kwargs):
-        partition_cols = self._write_data_frame_prep(df, partition_by=partition_by)
-        df.to_parquet(
-            self._get_dataset_path(),
-            engine=kwargs.get("engine", "pyarrow"),
-            compression=kwargs.get("compression", "snappy"),
-            partition_cols=partition_cols,
-            index=kwargs.get("index", False),
-            **kwargs,
-        )
+    def write(self, data: Union[pd.DataFrame, "ps.DataFrame", "SparkDataFrame", "dd.DataFrame"], **kwargs):
+        if isinstance(data, pd.DataFrame):
+            return self.write_pandas(data, **kwargs)
+        elif "pyspark.pandas.frame.DataFrame" in str(type(data)):
+            return self.write_spark_pandas(data, **kwargs)
+        elif "pyspark.sql.dataframe.DataFrame" in str(type(data)):
+            return self.write_spark(data, **kwargs)
+        elif "dask.dataframe.core.DataFrame" in str(type(data)):
+            return self.write_dask(data, **kwargs)
+        else:
+            raise ValueError(
+                f"data is of unsupported type {type(data)=}." " Or PySpark or Dask is not installed."
+            )
 
     def _partition_by_to_list(self, partition_by: Optional[ColumnNames] = None) -> List[str]:
         def to_list(partitions: Optional[ColumnNames]) -> List[str]:
@@ -256,17 +200,36 @@ class BatchDatasetPlugin(DatasetPlugin):
                 partition_cols.append("run_id")
             self.run_id = self._executor.current_run_id  # DO NOT ALLOW OVERWRITE OF ANOTHER RUN ID
             # TODO: should I add run_time for latest run query scenario?
-            try:
-                from pyspark.sql import DataFrame as SparkDataFrame
-                from pyspark.sql.functions import lit
-
-                if isinstance(df, SparkDataFrame):
-                    df = df.withColumn("run_id", lit(self.run_id))
-                else:
-                    df["run_id"] = self.run_id
-            except ImportError:
-                df["run_id"] = self.run_id
+            df["run_id"] = self.run_id
         return partition_cols
+
+    def write_dask(self, df: "dd.DataFrame", partition_by: Optional[ColumnNames] = None, **kwargs):
+        import dask.dataframe as dd
+
+        partition_cols = self._write_data_frame_prep(df, partition_by=partition_by)
+        print(f"{self._get_dataset_path()=}")
+        print(f"{kwargs=}")
+        dd.to_parquet(
+            df,
+            self._get_dataset_path(),
+            engine=kwargs.get("engine", "pyarrow"),
+            compression=kwargs.get("compression", "snappy"),
+            partition_on=partition_cols,
+            write_index=kwargs.get("write_index", False),
+            write_metadata_file=kwargs.get("write_metadata_file", False),
+            **kwargs,
+        )
+
+    def write_pandas(self, df: pd.DataFrame, partition_by: Optional[ColumnNames] = None, **kwargs):
+        partition_cols = self._write_data_frame_prep(df, partition_by=partition_by)
+        df.to_parquet(
+            self._get_dataset_path(),
+            engine=kwargs.get("engine", "pyarrow"),
+            compression=kwargs.get("compression", "snappy"),
+            partition_cols=partition_cols,
+            index=kwargs.get("index", False),
+            **kwargs,
+        )
 
     def write_spark_pandas(self, df: "ps.DataFrame", partition_by: Optional[ColumnNames] = None, **kwargs):
         self.write_spark(

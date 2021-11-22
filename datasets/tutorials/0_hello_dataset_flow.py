@@ -8,7 +8,7 @@ from datasets import DatasetType, Mode
 #  > python datasets/tutorials/0_hello_dataset_flow.py run \
 #    --hello_dataset '{"name": "HelloDataset", "partition_by": "region", "mode": "READ_WRITE"}'
 class HelloDatasetFlow(FlowSpec):
-    hello_dataset = Parameter(  # immutable
+    hello_dataset = Parameter(
         "hello_dataset",
         default=dict(name="HelloDataset", partition_by="region", mode=Mode.READ_WRITE),
         type=DatasetType,
@@ -29,9 +29,9 @@ class HelloDatasetFlow(FlowSpec):
     def end(self):
         print(f"I have dataset \n{self.hello_dataset=}")
 
-        # hello_dataset read_pandas()
-        df: pd.DataFrame = self.hello_dataset.read_pandas(run_id=current.run_id)
-        print("self.hello_dataset.read_pandas():\n", df.to_string(index=False))
+        # hello_dataset to_pandas()
+        df: pd.DataFrame = self.hello_dataset.to_pandas(run_id=current.run_id)
+        print("self.hello_dataset.to_pandas():\n", df.to_string(index=False))
 
         # save this as an output dataset
         self.output_dataset = self.hello_dataset

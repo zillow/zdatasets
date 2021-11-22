@@ -1,8 +1,6 @@
 ![Tests](https://github.com/zillow/datasets/actions/workflows/test.yml/badge.svg)
 [![Coverage Status](https://coveralls.io/repos/github/zillow/datasets/badge.svg)](https://coveralls.io/github/zillow/datasets)
-[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/zillow/datasets/tz/spark_pandas?urlpath=lab/tree/datasets/tutorials)
-
-TODO: doc badge
+[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/zillow/datasets?urlpath=lab/tree/datasets/tutorials)
 
 
 Welcome to @datasets
@@ -21,9 +19,9 @@ from datasets import DatasetType, Mode
 #  > python datasets/tutorials/0_hello_dataset_flow.py run \
 #    --hello_dataset '{"name": "foo", "partition_by": "region", "mode": "Write"}'
 class HelloDatasetFlow(FlowSpec):
-    hello_dataset = Parameter(  # immutable
+    hello_dataset = Parameter(
         "hello_dataset",
-        default=dict(name="hello_dataset", partition_by="region", mode=Mode.Write),
+        default=dict(name="HelloDataset", partition_by="region", mode=Mode.Write),
         type=DatasetType,
     )
 
@@ -36,20 +34,20 @@ class HelloDatasetFlow(FlowSpec):
         print(f"{self.hello_dataset.program_name=}")
         self.hello_dataset.write(df)
 
-            self.next(self.end)
+        self.next(self.end)
 
-        @step
-        def end(self):
-            print(f"I have dataset \n{self.hello_dataset=}")
+    @step
+    def end(self):
+        print(f"I have dataset \n{self.hello_dataset=}")
 
-        # hello_dataset read_pandas()
-        df: pd.DataFrame = self.hello_dataset.read_pandas(run_id=current.run_id)
-        print("self.hello_dataset.read_pandas():\n", df.to_string(index=False))
+    # hello_dataset to_pandas()
+    df: pd.DataFrame = self.hello_dataset.to_pandas(run_id=current.run_id)
+    print("self.hello_dataset.to_pandas():\n", df.to_string(index=False))
 
-        # save this as an output dataset
-        self.output_dataset = self.hello_dataset
+    # save this as an output dataset
+    self.output_dataset = self.hello_dataset
 
 
-    if __name__ == "__main__":
-        HelloDatasetFlow()
+if __name__ == "__main__":
+    HelloDatasetFlow()
 ```

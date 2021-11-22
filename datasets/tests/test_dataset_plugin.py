@@ -29,7 +29,7 @@ class NameDatasetPluginTest(DatasetPlugin):
     def __init__(self, test_name: str, **kwargs):
         super(NameDatasetPluginTest, self).__init__(name=test_name, **kwargs)
 
-    def read(self, key):
+    def to_pandas(self, key) -> pd.DataFrame:
         return self.db[self.db.key.isin(key)]
 
 
@@ -64,7 +64,7 @@ def test_from_keys():
 
     dataset = DatasetPlugin.from_keys(test_name="Foo")
     assert dataset.name == "Foo"
-    assert dataset.read(["first", "fourth"])["value"].to_list() == [1, 4]
+    assert dataset.to_pandas(["first", "fourth"])["value"].to_list() == [1, 4]
     assert isinstance(dataset, NameDatasetPluginTest)
 
     dataset = DatasetPlugin.from_keys(test_name="Ta", test_name2="Tb")
@@ -128,6 +128,15 @@ def test_register_plugin():
                 super(FooPlugin2, self).__init__(**kwargs)
 
     assert "context cannot be None" in str(execinfo.value)
+
+    with pytest.raises(ValueError) as execinfo:
+
+        @DatasetPlugin.register(constructor_keys={"name"}, context=1)
+        class FooPlugin3(DatasetPlugin):
+            def __init__(self, **kwargs):
+                super(FooPlugin3, self).__init__(**kwargs)
+
+    assert "is not of type(Context)" in str(execinfo.value)
 
 
 def test_is_valid_dataset_name():
