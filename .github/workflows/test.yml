@@ -60,7 +60,6 @@ jobs:
       run: |
         poetry run pytest datasets
         pip install coverage==6.1.2
-        pip show coverage coveragepy-lcov
         coveragepy-lcov
 
     - name: Publish to coveralls.io
