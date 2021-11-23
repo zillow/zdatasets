@@ -29,7 +29,7 @@ jobs:
     - name: Install Poetry
       run: |
         pip install --upgrade pip
-        pip install poetry coverage==6.1.2 coveragepy-lcov==0.1.1
+        pip install poetry coveragepy-lcov==0.1.1
 
     - name: Configure poetry
       run: poetry config virtualenvs.in-project true
@@ -59,8 +59,8 @@ jobs:
     - name: Execute Python tests
       run: |
         poetry run pytest datasets
-        pip show coveragepy-lcov
-        coveragepy-lcov --help
+        pip install coverage==6.1.2
+        pip show coverage coveragepy-lcov
         coveragepy-lcov
 
     - name: Publish to coveralls.io
