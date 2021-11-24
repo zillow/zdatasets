@@ -90,6 +90,7 @@ def test_default_plugin_pandas_csv(dataset: BatchDatasetPlugin, df: pd.DataFrame
 
 
 @pytest.mark.depends(on=["test_default_plugin_pandas"])
+@pytest.mark.parametrize("mode", [Mode.READ, Mode.READ_WRITE])
 def test_read_columns(dataset: BatchDatasetPlugin):
     df = dataset.to_pandas(columns="col1")
     assert df.columns.to_list() == ["col1"]
@@ -97,6 +98,7 @@ def test_read_columns(dataset: BatchDatasetPlugin):
 
 @pytest.mark.parametrize("path", [None])
 @pytest.mark.parametrize("partition_by", ["col1,col3", ["col1", "col3"]])
+@pytest.mark.parametrize("mode", [Mode.WRITE, Mode.READ_WRITE])
 def test_get_dataset_path(dataset: BatchDatasetPlugin, df: pd.DataFrame):
     dataset.write(df.copy())
     path = dataset._get_dataset_path()
