@@ -1,5 +1,9 @@
+import logging
 import os
 import uuid
+
+import pytest
+from pyspark.sql import SparkSession
 
 from datasets.context import Context
 from datasets.dataset_plugin import DatasetPlugin
@@ -30,3 +34,25 @@ class TestExecutor(ProgramExecutor):
 
 
 DatasetPlugin.register_executor(executor=TestExecutor())
+
+
+@pytest.fixture(scope="session")
+def spark_session():
+    """Fixture for creating a spark context."""
+    from pyspark.pandas.utils import SPARK_CONF_ARROW_ENABLED
+
+    spark_session = (
+        SparkSession.builder.master("local[2]")
+        .config(SPARK_CONF_ARROW_ENABLED, True)
+        .config("spark.sql.shuffle.partitions", "1")
+        .config("spark.executor.instances", "1")
+        .config("dfs.client.read.shortcircuit.skip.checksum", True)
+        # .config('spark.jars.packages', 'com.databricks:spark-avro_2.11:3.0.1')
+        .appName("dataset-pyspark-local-testing")
+        # .enableHiveSupport()
+        .getOrCreate()
+    )
+
+    logger = logging.getLogger("py4j")
+    logger.setLevel(logging.WARN)
+    return spark_session

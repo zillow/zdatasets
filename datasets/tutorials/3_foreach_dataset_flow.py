@@ -31,7 +31,7 @@ class ForeachDatasetFlow(FlowSpec):
         print(f"saving: {self.input=}")
 
         # Example of writing to a dataset with a path within a foreach split
-        self.my_dataset.write(df)
+        self.my_dataset.write_pandas(df)
 
         self.next(self.join_step)
 
@@ -44,7 +44,7 @@ class ForeachDatasetFlow(FlowSpec):
     def end(self):
         print(f"I have datasets \n{self.my_dataset=}\n")
         print(
-            self.my_dataset.read_pandas().to_string(index=False),
+            self.my_dataset.to_pandas().to_string(index=False),
         )
 
 

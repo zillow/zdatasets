@@ -4,7 +4,6 @@ on:
     branches:
     - main
     - feature/datasets
-    - tz/aip-5368-build-fix
   pull_request:
     branches:
     - main
@@ -29,7 +28,7 @@ jobs:
     - name: Install Poetry
       run: |
         pip install --upgrade pip
-        pip install poetry coveragepy-lcov
+        pip install poetry coveragepy-lcov==0.1.1
 
     - name: Configure poetry
       run: poetry config virtualenvs.in-project true
@@ -43,7 +42,8 @@ jobs:
 
     - name: Ensure cache is healthy
       if: steps.cached-poetry-dependencies.outputs.cache-hit == 'true'
-      run: poetry run pip --version >/dev/null 2>&1 || rm -rf .venv
+      run: |
+        poetry show || rm -rf .venv
 
     - name: Install Dependencies
       if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
@@ -59,6 +59,7 @@ jobs:
     - name: Execute Python tests
       run: |
         poetry run pytest datasets
+        pip install coverage==6.1.2
         coveragepy-lcov
 
     - name: Publish to coveralls.io

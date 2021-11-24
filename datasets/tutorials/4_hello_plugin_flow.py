@@ -24,7 +24,7 @@ class HelloPluginFlow(FlowSpec):
     def start(self):
         assert isinstance(self.hello_dataset, DefaultOnlineDatasetPlugin)
 
-        df: pd.DataFrame = self.hello_dataset.read_pandas(keys=["first", "third"])
+        df: pd.DataFrame = self.hello_dataset.to_pandas(keys=["first", "third"])
         print(f"{df=}")
 
         self.next(self.end)

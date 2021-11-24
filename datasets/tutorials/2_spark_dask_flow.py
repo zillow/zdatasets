@@ -13,14 +13,14 @@ class SparkDaskFlow(FlowSpec):
 
     @step
     def end(self):
-        # io_dataset read_spark()
-        # spark_df: DataFrame = self.io_dataset.read_spark()
+        # io_dataset to_spark()
+        # spark_df: DataFrame = self.io_dataset.to_spark()
         # spark_df.show()
 
-        # io_dataset read_dask()
-        dask_df: DataFrame = self.io_dataset.read_dask()
+        # io_dataset to_dask()
+        dask_df: DataFrame = self.io_dataset.to_dask()
         dask_df = dask_df[dask_df.zpid < 4]
-        print("self.io_dataset.read_dask: [zpid < 4]\n", dask_df.compute())
+        print("self.io_dataset.to_dask: [zpid < 4]\n", dask_df.compute())
 
 
 if __name__ == "__main__":
