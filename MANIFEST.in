@@ -1,0 +1,4 @@
+# TODO: https://python-poetry.org/docs/pyproject#include-and-exclude
+include VERSION
+include README.md
+recursive-include datasets/docs/*

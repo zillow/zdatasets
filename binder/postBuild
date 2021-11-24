@@ -1,0 +1,14 @@
+#!/bin/bash
+
+set -ex
+
+pip install --upgrade git+https://github.com/zillow/metaflow.git@feature/kfp
+
+pip install poetry
+
+which python
+poetry env use system
+poetry env info
+
+poetry config experimental.new-installer false
+poetry install -E dask -E spark --no-dev
