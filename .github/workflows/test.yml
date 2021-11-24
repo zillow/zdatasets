@@ -9,7 +9,7 @@ on:
     - main
     - feature/datasets
   release:
-    types: [ created ]
+    types: [ created, published ]
 jobs:
   test:
     name: ${{ matrix.lang }} tests on ${{ matrix.os }}
