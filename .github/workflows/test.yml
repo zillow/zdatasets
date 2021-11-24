@@ -8,7 +8,6 @@ on:
     branches:
     - main
     - feature/datasets
-    - tz/spark_pandas
 jobs:
   test:
     name: ${{ matrix.lang }} tests on ${{ matrix.os }}
@@ -43,7 +42,8 @@ jobs:
 
     - name: Ensure cache is healthy
       if: steps.cached-poetry-dependencies.outputs.cache-hit == 'true'
-      run: poetry run pip --version >/dev/null 2>&1 || rm -rf .venv
+      run: |
+        poetry show || rm -rf .venv
 
     - name: Install Dependencies
       if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
