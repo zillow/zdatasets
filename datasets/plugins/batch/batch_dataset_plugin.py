@@ -151,8 +151,9 @@ class BatchDatasetPlugin(DatasetPlugin):
         spark_session: SparkSession = SparkSession.builder.config(conf=conf).getOrCreate()
 
         df: DataFrame = spark_session.read.load(path, format=storage_format, **kwargs).select(*read_columns)
-        for name, op, val in filters:
-            df = df.where(df[name] == val)
+        if filters:
+            for name, op, val in filters:
+                df = df.where(df[name] == val)
 
         for meta_column in self._META_COLUMNS:
             if meta_column in df.columns and (read_columns is None or meta_column not in read_columns):
