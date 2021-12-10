@@ -80,6 +80,8 @@ class BatchDatasetPlugin(DatasetPlugin):
             filters = [("run_id", "=", query_run_id)]
 
         if partitions:
+            if filters is None:
+                filters = []
             for key, value in partitions.items():
                 filters.append((key, "=", value))
 
