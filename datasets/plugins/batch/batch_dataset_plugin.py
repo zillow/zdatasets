@@ -9,7 +9,6 @@ from typing import (
     Union,
 )
 
-import pandas
 import pandas as pd
 
 from datasets import Mode
@@ -17,7 +16,7 @@ from datasets._typing import ColumnNames
 from datasets.context import Context
 from datasets.dataset_plugin import DatasetPlugin
 from datasets.exceptions import InvalidOperationException
-from datasets.utils import _pascal_to_snake_case
+from datasets.utils.case_utils import pascal_to_snake_case
 
 
 if TYPE_CHECKING:
@@ -42,7 +41,7 @@ class BatchDatasetPlugin(DatasetPlugin):
         run_id: Optional[str] = None,
         mode: Mode = Mode.READ,
         partition_by: Optional[ColumnNames] = None,
-        path: Optional[str] = None,
+        path: Optional[Union[str, Path]] = None,
     ):
         self.path = path
         self.partition_by = partition_by
@@ -54,27 +53,49 @@ class BatchDatasetPlugin(DatasetPlugin):
             run_id=run_id,
             mode=mode,
         )
-        self._table_name = _pascal_to_snake_case(name)
+        self._table_name = pascal_to_snake_case(name)
 
-    def _get_path_filters_columns(
-        self, columns: Optional[ColumnNames] = None, run_id: Optional[str] = None
-    ) -> Tuple[str, Optional[list], Optional[Iterable[str]]]:
-        path = self._get_dataset_path()
+    @property
+    def path(self) -> str:
+        return self._path
+
+    @path.setter
+    def path(self, value: Optional[Union[str, Path]]):
+        if value:
+            self._path = str(value)
+        else:
+            self._path = value
+
+    def _get_filters_columns(
+        self,
+        columns: Optional[ColumnNames] = None,
+        run_id: Optional[str] = None,
+        partitions: Optional[dict] = None,
+    ) -> Tuple[Optional[list], Optional[Iterable[str]]]:
+        self.path = self._get_dataset_path()
         read_columns = self._get_read_columns(columns)
-        filters = None
+        filters: Optional[List[Tuple]] = None
         query_run_id = run_id if run_id else self.run_id
         if query_run_id:
             filters = [("run_id", "=", query_run_id)]
-        return path, filters, read_columns
+
+        if partitions:
+            for key, value in partitions.items():
+                filters.append((key, "=", value))
+
+        return filters, read_columns
 
     def to_spark_pandas(
         self,
         columns: Optional[str] = None,
         run_id: Optional[str] = None,
         conf: Optional["SparkConf"] = None,
+        partitions: Optional[dict] = None,
         **kwargs,
     ) -> "ps.DataFrame":
-        sdf: SparkDataFrame = self.to_spark(columns=columns, run_id=run_id, conf=conf, **kwargs)
+        sdf: SparkDataFrame = self.to_spark(
+            columns=columns, run_id=run_id, conf=conf, partitions=partitions, **kwargs
+        )
         psdf: ps.DataFrame = sdf.to_pandas_on_spark(index_col=kwargs.get("index_col", None))
         return psdf
 
@@ -83,24 +104,25 @@ class BatchDatasetPlugin(DatasetPlugin):
         columns: Optional[str] = None,
         run_id: Optional[str] = None,
         storage_format: str = "parquet",
+        partitions: Optional[dict] = None,
         **kwargs,
     ) -> pd.DataFrame:
         if not (self.mode & Mode.READ):
             raise InvalidOperationException(f"Cannot read because mode={self.mode}")
 
-        path, filters, read_columns = self._get_path_filters_columns(columns, run_id=run_id)
+        filters, read_columns = self._get_filters_columns(columns, run_id, partitions)
 
         df: pd.DataFrame
         if storage_format == "parquet":
-            df = pandas.read_parquet(
-                path,
+            df = pd.read_parquet(
+                self.path,
                 columns=read_columns,
                 filters=filters,
                 engine=kwargs.get("engine", "pyarrow"),
                 **kwargs,
             )
         elif storage_format == "csv":
-            df = pandas.read_csv(path, usecols=read_columns, **kwargs)
+            df = pd.read_csv(self.path, usecols=read_columns, **kwargs)
         else:
             raise ValueError(f"{storage_format=} not supported.")
 
@@ -110,16 +132,20 @@ class BatchDatasetPlugin(DatasetPlugin):
         return df
 
     def to_dask(
-        self, columns: Optional[str] = None, run_id: Optional[str] = None, **kwargs
+        self,
+        columns: Optional[str] = None,
+        run_id: Optional[str] = None,
+        partitions: Optional[dict] = None,
+        **kwargs,
     ) -> "dd.DataFrame":
         if not (self.mode & Mode.READ):
             raise InvalidOperationException(f"Cannot read because mode={self.mode}")
 
         import dask.dataframe as dd
 
-        path, filters, read_columns = self._get_path_filters_columns(columns, run_id)
+        filters, read_columns = self._get_filters_columns(columns, run_id, partitions)
         return dd.read_parquet(
-            path,
+            self.path,
             columns=read_columns,
             filters=filters,
             engine=kwargs.get("engine", "pyarrow"),
@@ -132,6 +158,7 @@ class BatchDatasetPlugin(DatasetPlugin):
         run_id: Optional[str] = None,
         conf: Optional["SparkConf"] = None,
         storage_format: str = "parquet",
+        partitions: Optional[dict] = None,
         **kwargs,
     ) -> "SparkDataFrame":
         if not (self.mode & Mode.READ):
@@ -140,7 +167,7 @@ class BatchDatasetPlugin(DatasetPlugin):
         from pyspark import SparkConf
         from pyspark.sql import DataFrame, SparkSession
 
-        path, filters, read_columns = self._get_path_filters_columns(columns, run_id)
+        filters, read_columns = self._get_filters_columns(columns, run_id, partitions)
 
         read_columns = read_columns if read_columns else ["*"]
         if (self.run_id or run_id) and "*" not in read_columns and "run_id" not in read_columns:
@@ -150,9 +177,13 @@ class BatchDatasetPlugin(DatasetPlugin):
             conf = SparkConf()
         spark_session: SparkSession = SparkSession.builder.config(conf=conf).getOrCreate()
 
-        df: DataFrame = spark_session.read.load(path, format=storage_format, **kwargs).select(*read_columns)
-        for name, op, val in filters:
-            df = df.where(df[name] == val)
+        df: DataFrame = spark_session.read.load(self.path, format=storage_format, **kwargs).select(
+            *read_columns
+        )
+
+        if filters:
+            for name, op, val in filters:
+                df = df.where(df[name] == val)
 
         for meta_column in self._META_COLUMNS:
             if meta_column in df.columns and (read_columns is None or meta_column not in read_columns):
@@ -170,7 +201,7 @@ class BatchDatasetPlugin(DatasetPlugin):
             return self.write_dask(data, **kwargs)
         else:
             raise ValueError(
-                f"data is of unsupported type {type(data)=}." " Or PySpark or Dask is not installed."
+                f"data is of unsupported type {type(data)=}. Maybe PySpark/Dask is not installed?"
             )
 
     def _partition_by_to_list(self, partition_by: Optional[ColumnNames] = None) -> List[str]:
@@ -207,11 +238,10 @@ class BatchDatasetPlugin(DatasetPlugin):
         import dask.dataframe as dd
 
         partition_cols = self._write_data_frame_prep(df, partition_by=partition_by)
-        print(f"{self._get_dataset_path()=}")
-        print(f"{kwargs=}")
+        self.path = self._get_dataset_path()
         dd.to_parquet(
             df,
-            self._get_dataset_path(),
+            self.path,
             engine=kwargs.get("engine", "pyarrow"),
             compression=kwargs.get("compression", "snappy"),
             partition_on=partition_cols,
@@ -222,8 +252,9 @@ class BatchDatasetPlugin(DatasetPlugin):
 
     def write_pandas(self, df: pd.DataFrame, partition_by: Optional[ColumnNames] = None, **kwargs):
         partition_cols = self._write_data_frame_prep(df, partition_by=partition_by)
+        self.path = self._get_dataset_path()
         df.to_parquet(
-            self._get_dataset_path(),
+            self.path,
             engine=kwargs.get("engine", "pyarrow"),
             compression=kwargs.get("compression", "snappy"),
             partition_cols=partition_cols,
@@ -254,9 +285,12 @@ class BatchDatasetPlugin(DatasetPlugin):
             self.run_id = self._executor.current_run_id  # DO NOT ALLOW OVERWRITE OF ANOTHER RUN ID
             df = df.withColumn("run_id", lit(self.run_id))
 
+        # set after checking: self.path is None
+        self.path = self._get_dataset_path()
+
         # TODO: should mode=overwrite be the default policy??
         df.write.options(**kwargs).mode(kwargs.get("mode", "overwrite")).parquet(
-            path=self._get_dataset_path(),
+            path=self.path,
             partitionBy=partition_cols,
             compression=kwargs.get("compression", "snappy"),
         )
@@ -282,6 +316,5 @@ class BatchDatasetPlugin(DatasetPlugin):
     def __repr__(self):
         return (
             f"BatchDatasetPlugin({self.name=},{self.key=},{self.partition_by=},"
-            f"{self.run_id=},{self.columns=},"
-            f"dataset_path={self._get_dataset_path()},{self._table_name=})"
+            f"{self.run_id=},{self.columns=},{self.path=},{self._table_name=})"
         )
