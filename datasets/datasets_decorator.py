@@ -4,7 +4,7 @@ from typing import Callable, Optional
 
 from datasets import DatasetPlugin
 from datasets.context import Context
-from datasets.utils import _pascal_to_snake_case
+from datasets.utils.case_utils import pascal_to_snake_case
 
 
 def dataset(
@@ -24,7 +24,7 @@ def dataset(
                     raise ValueError(f"{field_name} is not a valid Python identifier")
                 setattr(self, field_name, dataset)
             else:
-                _snake_name = _pascal_to_snake_case(dataset.name)
+                _snake_name = pascal_to_snake_case(dataset.name)
                 setattr(self, _snake_name, dataset)
 
             func(*args, **kwargs)

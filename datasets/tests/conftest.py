@@ -1,6 +1,7 @@
 import logging
 import os
 import uuid
+from pathlib import Path
 
 import pytest
 from pyspark.sql import SparkSession
@@ -8,6 +9,16 @@ from pyspark.sql import SparkSession
 from datasets.context import Context
 from datasets.dataset_plugin import DatasetPlugin
 from datasets.program_executor import ProgramExecutor
+
+
+@pytest.fixture
+def test_dir() -> Path:
+    return Path(os.path.realpath(__file__)).parent
+
+
+@pytest.fixture
+def data_path(test_dir: str) -> Path:
+    return test_dir / Path("data")
 
 
 _run_id = str(uuid.uuid1())

@@ -5,7 +5,7 @@ from typing import Callable, Dict, Iterable, Optional, Union
 
 from datasets._typing import ColumnNames
 from datasets.context import Context
-from datasets.utils import _is_upper_pascal_case
+from datasets.utils.case_utils import is_upper_pascal_case
 
 from .mode import Mode
 from .program_executor import ProgramExecutor
@@ -148,7 +148,7 @@ class DatasetPlugin(ABC):
 
 
 def _validate_dataset_name(name: str):
-    if not _is_upper_pascal_case(name):
+    if not is_upper_pascal_case(name):
         raise ValueError(
             f"'{name}' is not a valid Dataset name.  "
             f"Please use Upper Pascal Case syntax: https://en.wikipedia.org/wiki/Camel_case"

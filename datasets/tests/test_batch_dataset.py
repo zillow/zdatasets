@@ -15,12 +15,12 @@ from datasets.exceptions import InvalidOperationException
 from datasets.plugins.batch.batch_dataset_plugin import BatchDatasetPlugin
 
 
-ds1_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "data/ds1")
+csv_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "data/pandas.csv")
 
 
 @pytest.fixture
-def path() -> str:
-    return ds1_path
+def path(data_path: str) -> str:
+    return os.path.join(data_path, "data/ds1")
 
 
 @pytest.fixture
@@ -60,10 +60,10 @@ def df() -> pd.DataFrame:
     return pd.DataFrame(data)
 
 
-def test_from_keys_offline_plugin(dataset: BatchDatasetPlugin):
+def test_from_keys_offline_plugin(dataset: BatchDatasetPlugin, path: str):
     assert dataset.name == "Ds1"
     assert dataset.key == "my_key"
-    assert dataset.path == ds1_path
+    assert dataset.path == path
     assert dataset.partition_by == "col1,run_id"
 
 
@@ -81,12 +81,13 @@ def test_default_plugin_pandas(dataset: BatchDatasetPlugin, df: pd.DataFrame):
     assert (df == read_df).all().all()
 
 
+@pytest.mark.parametrize("path", [csv_path])
 def test_default_plugin_pandas_csv(dataset: BatchDatasetPlugin, df: pd.DataFrame):
-    shutil.rmtree(ds1_path, ignore_errors=True)
-    df.to_csv(ds1_path)
+    shutil.rmtree(csv_path, ignore_errors=True)
+    df.to_csv(csv_path)
     read_df = dataset.to_pandas(columns="col1,col2,col3", storage_format="csv")
     assert (df == read_df).all().all()
-    shutil.rmtree(ds1_path, ignore_errors=True)
+    shutil.rmtree(csv_path, ignore_errors=True)
 
 
 @pytest.mark.depends(on=["test_default_plugin_pandas"])
@@ -141,7 +142,7 @@ def test_read_on_write_only_dask(dataset: BatchDatasetPlugin, df):
 
 @pytest.mark.parametrize("path", [None])
 @pytest.mark.parametrize("partition_by", ["col1"])
-@pytest.mark.spark
+# @pytest.mark.spark
 def test_offline_plugin_spark(dataset: BatchDatasetPlugin, df: pd.DataFrame, spark_session):
     df: SparkDataFrame = ps.from_pandas(df).to_spark()
     assert isinstance(df, SparkDataFrame)
@@ -209,5 +210,6 @@ def test_zillow_dataset_path_plugin(dataset: BatchDatasetPlugin, df: pd.DataFram
     assert path.endswith("datasets/tests/data/datastore/my_program/my_table")
 
     os.environ["ZODIAC_SERVICE"] = "test_service"
+    dataset.path = None
     path = dataset._get_dataset_path()
     assert path.endswith("datasets/tests/data/datastore/test_service/my_program/my_table")

@@ -1,7 +1,7 @@
 import keyword
 
 
-def _is_upper_pascal_case(name: str) -> bool:
+def is_upper_pascal_case(name: str) -> bool:
     is_valid: bool = (
         name.isidentifier()
         and name[0].isupper()
@@ -15,7 +15,7 @@ def _is_upper_pascal_case(name: str) -> bool:
     return is_valid
 
 
-def _pascal_to_snake_case(name: str) -> str:
-    assert _is_upper_pascal_case(name)
+def pascal_to_snake_case(name: str) -> str:
+    assert is_upper_pascal_case(name)
     snake = [f"_{c.lower()}" if c.isupper() else c for c in name]
     return "".join(snake).lstrip("_")
