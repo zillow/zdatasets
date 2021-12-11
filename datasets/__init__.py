@@ -8,7 +8,6 @@ from datasets.datasets_decorator import dataset
 from datasets.mode import Mode
 
 from datasets import plugins
-from metaflow.parameters import context_proto
 
 
 class DatasetTypeClass(click.ParamType):
