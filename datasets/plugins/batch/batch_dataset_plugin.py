@@ -26,7 +26,7 @@ if TYPE_CHECKING:
 
 
 @DatasetPlugin.register(constructor_keys={"name"}, context=Context.BATCH)
-class BatchDatasetPlugin(DatasetPlugin):
+class BatchDatasetPlugin(DatasetPlugin, dict):
     """
     The default plugin for the BATCH execution context.
     """
@@ -54,6 +54,18 @@ class BatchDatasetPlugin(DatasetPlugin):
             mode=mode,
         )
         self._table_name = pascal_to_snake_case(name)
+
+        def set_name(key: str, value: Optional[object]):
+            if value:
+                self[key] = value
+
+        dict.__init__(self, name=name)
+        set_name("logical_key", logical_key)
+        set_name("columns", columns)
+        set_name("run_id", run_id)
+        set_name("mode", mode.name)
+        set_name("partition_by", partition_by)
+        set_name("path", path)
 
     @property
     def path(self) -> str:
