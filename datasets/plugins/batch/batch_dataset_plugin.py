@@ -1,3 +1,4 @@
+import logging
 from pathlib import Path
 from typing import (
     TYPE_CHECKING,
@@ -18,6 +19,8 @@ from datasets.dataset_plugin import DatasetPlugin
 from datasets.exceptions import InvalidOperationException
 from datasets.utils.case_utils import pascal_to_snake_case
 
+
+_logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     import dask.dataframe as dd
@@ -122,6 +125,7 @@ class BatchDatasetPlugin(DatasetPlugin, dict):
 
         filters, read_columns = self._get_filters_columns(columns, run_id, partitions)
         self.path = self._get_dataset_path()
+        _logger.info(f"to_pandas({self.path=}, {read_columns=}, {partitions=}, {run_id=}, {filters=})")
 
         df: pd.DataFrame
         if storage_format == "parquet":
@@ -156,6 +160,7 @@ class BatchDatasetPlugin(DatasetPlugin, dict):
 
         filters, read_columns = self._get_filters_columns(columns, run_id, partitions)
         self.path = self._get_dataset_path()
+        _logger.info(f"to_dask({self.path=}, {read_columns=}, {partitions=}, {run_id=}, {filters=})")
         return dd.read_parquet(
             self.path,
             columns=read_columns,
@@ -190,6 +195,7 @@ class BatchDatasetPlugin(DatasetPlugin, dict):
             conf = SparkConf()
         spark_session: SparkSession = SparkSession.builder.config(conf=conf).getOrCreate()
 
+        _logger.info(f"to_spark({self.path=}, {read_columns=}, {partitions=}, {run_id=}, {filters=})")
         df: DataFrame = spark_session.read.load(self.path, format=storage_format, **kwargs).select(
             *read_columns
         )
@@ -252,6 +258,7 @@ class BatchDatasetPlugin(DatasetPlugin, dict):
 
         partition_cols = self._write_data_frame_prep(df, partition_by=partition_by)
         self.path = self._get_dataset_path()
+        _logger.info(f"write_dask({self.path=}, {partition_cols=})")
         dd.to_parquet(
             df,
             self.path,
@@ -266,6 +273,7 @@ class BatchDatasetPlugin(DatasetPlugin, dict):
     def write_pandas(self, df: pd.DataFrame, partition_by: Optional[ColumnNames] = None, **kwargs):
         partition_cols = self._write_data_frame_prep(df, partition_by=partition_by)
         self.path = self._get_dataset_path()
+        _logger.info(f"write_pandas({self.path=}, {partition_cols=})")
         df.to_parquet(
             self.path,
             engine=kwargs.get("engine", "pyarrow"),
@@ -300,6 +308,7 @@ class BatchDatasetPlugin(DatasetPlugin, dict):
 
         # set after checking: self.path is None
         self.path = self._get_dataset_path()
+        _logger.info(f"write_spark({self.path=}, {partition_cols=})")
 
         # TODO: should mode=overwrite be the default policy??
         df.write.options(**kwargs).mode(kwargs.get("mode", "overwrite")).parquet(
