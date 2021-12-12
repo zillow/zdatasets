@@ -59,11 +59,10 @@ class BatchDatasetPlugin(DatasetPlugin, dict):
             if value:
                 self[key] = value
 
-        dict.__init__(self, name=name)
+        dict.__init__(self, name=name, mode=mode.name)
         set_name("logical_key", logical_key)
         set_name("columns", columns)
         set_name("run_id", run_id)
-        set_name("mode", mode.name)
         set_name("partition_by", partition_by)
         set_name("path", path)
 
@@ -84,7 +83,6 @@ class BatchDatasetPlugin(DatasetPlugin, dict):
         run_id: Optional[str] = None,
         partitions: Optional[dict] = None,
     ) -> Tuple[Optional[list], Optional[Iterable[str]]]:
-        self.path = self._get_dataset_path()
         read_columns = self._get_read_columns(columns)
         filters: Optional[List[Tuple]] = None
         query_run_id = run_id if run_id else self.run_id
@@ -107,11 +105,9 @@ class BatchDatasetPlugin(DatasetPlugin, dict):
         partitions: Optional[dict] = None,
         **kwargs,
     ) -> "ps.DataFrame":
-        sdf: SparkDataFrame = self.to_spark(
+        return self.to_spark(
             columns=columns, run_id=run_id, conf=conf, partitions=partitions, **kwargs
-        )
-        psdf: ps.DataFrame = sdf.to_pandas_on_spark(index_col=kwargs.get("index_col", None))
-        return psdf
+        ).to_pandas_on_spark(index_col=kwargs.get("index_col", None))
 
     def to_pandas(
         self,
@@ -125,6 +121,7 @@ class BatchDatasetPlugin(DatasetPlugin, dict):
             raise InvalidOperationException(f"Cannot read because mode={self.mode}")
 
         filters, read_columns = self._get_filters_columns(columns, run_id, partitions)
+        self.path = self._get_dataset_path()
 
         df: pd.DataFrame
         if storage_format == "parquet":
@@ -158,6 +155,7 @@ class BatchDatasetPlugin(DatasetPlugin, dict):
         import dask.dataframe as dd
 
         filters, read_columns = self._get_filters_columns(columns, run_id, partitions)
+        self.path = self._get_dataset_path()
         return dd.read_parquet(
             self.path,
             columns=read_columns,
@@ -182,6 +180,7 @@ class BatchDatasetPlugin(DatasetPlugin, dict):
         from pyspark.sql import DataFrame, SparkSession
 
         filters, read_columns = self._get_filters_columns(columns, run_id, partitions)
+        self.path = self._get_dataset_path()
 
         read_columns = read_columns if read_columns else ["*"]
         if (self.run_id or run_id) and "*" not in read_columns and "run_id" not in read_columns:
