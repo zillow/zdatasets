@@ -20,7 +20,7 @@ csv_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "data/panda
 
 @pytest.fixture
 def path(data_path: str) -> str:
-    return os.path.join(data_path, "data/ds1")
+    return os.path.join(data_path, "ds1")
 
 
 @pytest.fixture
@@ -75,10 +75,23 @@ def test_from_read_on_mode_write(dataset: BatchDatasetPlugin, df: pd.DataFrame):
     assert f"Cannot read because mode={Mode.WRITE}" in str(exec_info.value)
 
 
-def test_default_plugin_pandas(dataset: BatchDatasetPlugin, df: pd.DataFrame):
+@pytest.mark.parametrize("path", [None])
+@pytest.mark.parametrize("partition_by", ["col1,col3"])
+def test_to_pandas(dataset: BatchDatasetPlugin, df: pd.DataFrame):
     dataset.write(df.copy())
     read_df = dataset.to_pandas(columns="col1,col2,col3")
     assert (df == read_df).all().all()
+
+    df = dataset.to_pandas(columns="col1")
+    assert df.columns.to_list() == ["col1"]
+
+    df1 = dataset.to_pandas(partitions=dict(col1="A", col3="A1"))
+    assert df1["col1"].unique().tolist() == ["A"]
+    assert df1["col3"].unique().tolist() == ["A1"]
+
+    df2 = dataset.to_pandas(partitions=dict(col1="A"))
+    assert df2["col1"].unique().tolist() == ["A"]
+    assert df2["col3"].unique().tolist() == ["A1", "A2"]
 
 
 @pytest.mark.parametrize("path", [csv_path])
@@ -90,11 +103,22 @@ def test_default_plugin_pandas_csv(dataset: BatchDatasetPlugin, df: pd.DataFrame
     shutil.rmtree(csv_path, ignore_errors=True)
 
 
-@pytest.mark.depends(on=["test_default_plugin_pandas"])
-@pytest.mark.parametrize("mode", [Mode.READ, Mode.READ_WRITE])
-def test_read_columns(dataset: BatchDatasetPlugin):
-    df = dataset.to_pandas(columns="col1")
-    assert df.columns.to_list() == ["col1"]
+def test_to_pandas_unsupported_format(dataset: BatchDatasetPlugin):
+    with pytest.raises(ValueError) as exec_info:
+        dataset.to_pandas(storage_format="foo")
+
+    assert "foo" in str(exec_info.value)
+
+
+def test_to_pandas_mode_read(dataset: BatchDatasetPlugin, df: pd.DataFrame):
+    dataset.write(df)
+
+    def test_read():
+        assert dataset.to_pandas(columns="col1").columns.to_list() == ["col1"]
+
+    test_read()
+    dataset.mode = Mode.READ
+    test_read()
 
 
 @pytest.mark.parametrize("path", [None])
@@ -102,10 +126,9 @@ def test_read_columns(dataset: BatchDatasetPlugin):
 @pytest.mark.parametrize("mode", [Mode.WRITE, Mode.READ_WRITE])
 def test_get_dataset_path(dataset: BatchDatasetPlugin, df: pd.DataFrame):
     dataset.write(df.copy())
-    path = dataset._get_dataset_path()
-    assert path.endswith("datasets/tests/data/datastore/my_program/ds1")
-    os.path.exists(f"{path}/col1=A/col3=A1")
-    shutil.rmtree(path)
+    assert dataset.path.endswith("datasets/tests/data/datastore/my_program/ds1")
+    os.path.exists(f"{dataset.path}/col1=A/col3=A1")
+    shutil.rmtree(dataset.path)
 
 
 @pytest.mark.parametrize("mode", [Mode.READ])
@@ -133,7 +156,6 @@ def test_write_on_read_only_dask(dataset: BatchDatasetPlugin, df):
         dataset.write(data)
 
 
-@pytest.mark.depends(on=["test_offline_plugin_dask"])
 @pytest.mark.parametrize("mode", [Mode.WRITE])
 def test_read_on_write_only_dask(dataset: BatchDatasetPlugin, df):
     with pytest.raises(InvalidOperationException):
@@ -141,15 +163,23 @@ def test_read_on_write_only_dask(dataset: BatchDatasetPlugin, df):
 
 
 @pytest.mark.parametrize("path", [None])
-@pytest.mark.parametrize("partition_by", ["col1"])
-# @pytest.mark.spark
-def test_offline_plugin_spark(dataset: BatchDatasetPlugin, df: pd.DataFrame, spark_session):
-    df: SparkDataFrame = ps.from_pandas(df).to_spark()
-    assert isinstance(df, SparkDataFrame)
-    dataset.write(df)
+@pytest.mark.parametrize("partition_by", ["col1,col3"])
+@pytest.mark.spark
+def test_to_spark(dataset: BatchDatasetPlugin, df: pd.DataFrame, spark_session):
+    sdf: SparkDataFrame = ps.from_pandas(df).to_spark()
+    assert isinstance(sdf, SparkDataFrame)
+    dataset.write(sdf)
     spark_df = dataset.to_spark(columns="col1")
     spark_df.show()
     assert spark_df.columns == ["col1", "run_id"]  # run_id is added
+
+    df1 = dataset.to_spark(partitions=dict(col1="A", col3="A1")).toPandas()
+    assert df1["col1"].unique().tolist() == ["A"]
+    assert df1["col3"].unique().tolist() == ["A1"]
+
+    df2 = dataset.to_spark(partitions=dict(col1="A")).toPandas()
+    assert df2["col1"].unique().tolist() == ["A"]
+    assert df2["col3"].unique().tolist() == ["A1", "A2"]
 
 
 @pytest.mark.spark
@@ -180,13 +210,14 @@ def test_default_plugin_spark_pandas(dataset: BatchDatasetPlugin, df: pd.DataFra
 
 
 @pytest.mark.parametrize("mode", [Mode.READ])
+@pytest.mark.spark
 def test_write_on_read_only_spark_pandas(dataset: BatchDatasetPlugin):
     df = pd.DataFrame({"col1": ["A", "A", "A", "B", "B", "B"], "col2": [1, 2, 3, 4, 5, 6]})
     with pytest.raises(InvalidOperationException):
         dataset.write(ps.from_pandas(df))
 
 
-def test_write_unsupported(dataset: BatchDatasetPlugin):
+def test_write_unsupported_data_type(dataset: BatchDatasetPlugin):
     data = {}
     with pytest.raises(ValueError):
         dataset.write(data)
