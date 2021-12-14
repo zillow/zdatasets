@@ -79,7 +79,7 @@ class HiveDataset(BatchBasePlugin):
         if (self.run_id or run_id) and "*" not in read_columns and "run_id" not in read_columns:
             read_columns.append("run_id")
 
-        spark_session: SparkSession = self._create_spark_session(conf=kwargs.get("conf", None))
+        spark_session: SparkSession = self._get_or_create_spark_session(conf=kwargs.get("conf", None))
 
         print(f"to_spark({self.hive_table=}, {read_columns=}, {partitions=}, {run_id=}, {filters=})")
         df: DataFrame = spark_session.read.table(self.hive_table).select(*read_columns)
@@ -114,15 +114,13 @@ class HiveDataset(BatchBasePlugin):
             **kwargs,
         )
 
-    def _create_spark_session(self, conf: "SparkConf" = None) -> "SparkSession":
+    def _get_or_create_spark_session(self, conf: "SparkConf" = None) -> "SparkSession":
         from pyspark import SparkConf
         from pyspark.sql import SparkSession
 
         if conf is None:
             conf = SparkConf()
-        spark_session: SparkSession = SparkSession.builder.config(conf=conf).enableHiveSupport().getOrCreate()
-
-        return spark_session
+        return SparkSession.builder.config(conf=conf).enableHiveSupport().getOrCreate()
 
     def write_spark(self, df: "SparkDataFrame", partition_by: Optional[ColumnNames] = None, **kwargs):
         df, partition_cols = self._write_data_frame_prep(df, partition_by=partition_by)
@@ -137,7 +135,7 @@ class HiveDataset(BatchBasePlugin):
         #      Overwrite mode means that when saving a DataFrame to a data source,
         #      if data/table already exists, existing data is expected to be overwritten
         #      by the contents of the DataFrame.
-        self._create_spark_session(conf=kwargs.get("conf", None))
+        self._get_or_create_spark_session(conf=kwargs.get("conf", None))
         (
             df.write.option("path", self._get_dataset_path())
             .options(**kwargs)
