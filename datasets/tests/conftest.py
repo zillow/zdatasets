@@ -60,7 +60,6 @@ def spark_session():
         .config("spark.executor.instances", "1")
         .config("dfs.client.read.shortcircuit.skip.checksum", True)
         .config("hive.metastore.warehouse.dir", str(test_dir / Path("data")))
-        # .config("spark.sql.legacy.allowCreatingManagedTableUsingNonemptyLocation", "true")
         .appName("dataset-pyspark-local-testing")
         .enableHiveSupport()
         .getOrCreate()
