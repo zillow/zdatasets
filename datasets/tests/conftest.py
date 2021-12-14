@@ -11,17 +11,18 @@ from datasets.dataset_plugin import DatasetPlugin
 from datasets.program_executor import ProgramExecutor
 
 
-@pytest.fixture
-def test_dir() -> Path:
-    return Path(os.path.realpath(__file__)).parent
+test_dir = Path(os.path.realpath(__file__)).parent
+_run_id = str(uuid.uuid1())
 
 
 @pytest.fixture
-def data_path(test_dir: str) -> Path:
+def data_path() -> Path:
     return test_dir / Path("data")
 
 
-_run_id = str(uuid.uuid1())
+@pytest.fixture
+def run_id() -> str:
+    return _run_id
 
 
 class TestExecutor(ProgramExecutor):
@@ -58,9 +59,10 @@ def spark_session():
         .config("spark.sql.shuffle.partitions", "1")
         .config("spark.executor.instances", "1")
         .config("dfs.client.read.shortcircuit.skip.checksum", True)
-        # .config('spark.jars.packages', 'com.databricks:spark-avro_2.11:3.0.1')
+        .config("hive.metastore.warehouse.dir", str(test_dir / Path("data")))
+        # .config("spark.sql.legacy.allowCreatingManagedTableUsingNonemptyLocation", "true")
         .appName("dataset-pyspark-local-testing")
-        # .enableHiveSupport()
+        .enableHiveSupport()
         .getOrCreate()
     )
 

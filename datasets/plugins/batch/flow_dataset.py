@@ -15,7 +15,7 @@ class FlowDataset(BatchDataset):
     def __init__(
         self,
         flow_dataset: str,
-        name: str = None,
+        name: Optional[str] = None,
         columns: Optional[ColumnNames] = None,
         run_id: Optional[str] = "latest_successful_run",
     ):
