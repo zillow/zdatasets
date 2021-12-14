@@ -135,6 +135,9 @@ class HiveDataset(BatchBasePlugin):
         #      Overwrite mode means that when saving a DataFrame to a data source,
         #      if data/table already exists, existing data is expected to be overwritten
         #      by the contents of the DataFrame.
+
+        # TODO: Policy question, if the table does not exist:
+        #   Should "run_id" be added to partition_cols by default?
         self._get_or_create_spark_session(conf=kwargs.get("conf", None))
         (
             df.write.option("path", self._get_dataset_path())
