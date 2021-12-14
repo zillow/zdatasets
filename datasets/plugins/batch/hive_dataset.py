@@ -138,6 +138,9 @@ class HiveDataset(BatchBasePlugin):
 
         # TODO: Policy question, if the table does not exist:
         #   Should "run_id" be added to partition_cols by default?
+
+        # TODO: if the table already exists, then don't set [path, mode, partitionBy]
+        # TODO: add unit test of existing hive table with different than expected path
         self._get_or_create_spark_session(conf=kwargs.get("conf", None))
         (
             df.write.option("path", self._get_dataset_path())
