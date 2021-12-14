@@ -37,7 +37,5 @@ def pascal_to_snake_case(name: str) -> str:
 
 
 def snake_case_to_pascal(name: str) -> str:
-    assert is_snake_case(name)
     upper_pascal = name.replace("_", " ").title().replace(" ", "")
-    assert is_upper_pascal_case(upper_pascal)
     return upper_pascal

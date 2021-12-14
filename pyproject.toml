@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "zdatasets"
-version = "0.0.5.dev2"
+version = "0.0.5.dev3"
 description = "Dataset SDK for consistent read/write [batch, online, streaming] data."
 classifiers = [
   "Development Status :: 2 - Pre-Alpha",
@@ -20,6 +20,7 @@ include = "datasets"
 [tool.poetry.plugins."datasets.plugins"]
 batch_dataset = "datasets.plugins:BatchDataset"
 flow_dataset = "datasets.plugins:FlowDataset"
+hive_dataset = "datasets.plugins:HiveDataset"
 
 [tool.poetry.plugins."datasets.executors"]
 metaflow_executor = "datasets.plugins:MetaflowExecutor"

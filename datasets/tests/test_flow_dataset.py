@@ -18,7 +18,6 @@ def test_get_run_id():
     assert run_id == latest_successful_run.id
     assert run_id == run.id
 
-    print(f"{type(run_2_output)=}", run_2_output)
     assert run_id in run_2_output
 
     run, run_id = _get_run_id(flow_name, run_id=run_1_id)

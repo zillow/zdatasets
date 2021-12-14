@@ -55,6 +55,10 @@ def test_consistent_flow():
     )
 
 
+def test_hive_flow():
+    run_flow("tutorials/6_hive_dataset_flow.py")
+
+
 def run_flow(flow_py, args: Optional[list] = None, context: Optional[str] = None) -> str:
     os.environ["METAFLOW_COVERAGE_SOURCE"] = "tutorial,datasets"
     os.environ["METAFLOW_COVERAGE_OMIT"] = "metaflow"

@@ -10,7 +10,6 @@ from datasets.context import Context
 from datasets.dataset_plugin import DatasetPlugin, dataset_name_validator
 from datasets.exceptions import InvalidOperationException
 from datasets.plugins.batch.batch_base_plugin import BatchBasePlugin
-from datasets.utils.case_utils import pascal_to_snake_case
 
 
 _logger = logging.getLogger(__name__)
@@ -131,7 +130,7 @@ class BatchDataset(BatchBasePlugin):
         partitions: Optional[dict] = None,
         **kwargs,
     ) -> "SparkDataFrame":
-        if not (self.mode & Mode.READ):
+        if not self.mode & Mode.READ:
             raise InvalidOperationException(f"Cannot read because mode={self.mode}")
 
         from pyspark import SparkConf
@@ -240,6 +239,6 @@ class BatchDataset(BatchBasePlugin):
 
     def __repr__(self):
         return (
-            f"BatchPlugin({self.name=},{self.key=},{self.partition_by=},"
-            f"{self.run_id=},{self.columns=},{self.path=},{self._path=})"
+            f"BatchDataset({self.name=},{self.key=},{self.partition_by=},"
+            f"{self.run_id=},{self.columns=},{self.mode=},{self.path=},{self._path=})"
         )
