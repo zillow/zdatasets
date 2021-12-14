@@ -96,6 +96,7 @@ def test_to_pandas(dataset: BatchDataset, df: pd.DataFrame):
 
 
 @pytest.mark.parametrize("path", [csv_path])
+@pytest.mark.parametrize("mode", ["READ_WRITE"])
 def test_default_plugin_pandas_csv(dataset: BatchDataset, df: pd.DataFrame):
     shutil.rmtree(csv_path, ignore_errors=True)
     df.to_csv(csv_path)
