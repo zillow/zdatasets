@@ -1,5 +1,14 @@
 import logging
-from typing import TYPE_CHECKING, Iterable, List, Optional, Tuple, Union
+import os
+from typing import (
+    TYPE_CHECKING,
+    Callable,
+    Iterable,
+    List,
+    Optional,
+    Tuple,
+    Union,
+)
 
 import pandas as pd
 
@@ -21,15 +30,19 @@ class BatchBasePlugin(DatasetPlugin, dict):
     The base plugin for the BATCH execution context.
     """
 
+    _dataset_path_func: Callable = None
+
     def __init__(
         self,
         name: str,
+        hive_table_name: str,
         logical_key: str = None,
         columns: Optional[ColumnNames] = None,
         run_id: Optional[str] = None,
         mode: Mode = Mode.READ,
         partition_by: Optional[ColumnNames] = None,
     ):
+        self.hive_table_name = hive_table_name
         self.partition_by = partition_by
         self.program_name = self._executor.current_program_name
         super(BatchBasePlugin, self).__init__(
@@ -44,7 +57,7 @@ class BatchBasePlugin(DatasetPlugin, dict):
             if value:
                 self[key] = value
 
-        dict.__init__(self, name=name, mode=mode.name)
+        dict.__init__(self, name=name, hive_table_name=hive_table_name, mode=self.mode.name)
         set_name("logical_key", logical_key)
         set_name("columns", columns)
         set_name("run_id", run_id)
@@ -102,3 +115,22 @@ class BatchBasePlugin(DatasetPlugin, dict):
             else:
                 df["run_id"] = self.run_id
         return df, partition_cols
+
+    @classmethod
+    def register_dataset_path_func(cls, func: Optional[Callable]):
+        BatchBasePlugin._dataset_path_func = func
+
+    def _get_dataset_path(self) -> str:
+        if self._path is not None:
+            return self._path
+
+        if BatchBasePlugin._dataset_path_func:
+            return BatchBasePlugin._dataset_path_func(self)
+
+        path = os.path.join(
+            self._executor.datastore_path,
+            "datastore",
+            (self.program_name if self.program_name else self._executor.current_program_name),
+            self.hive_table_name,
+        )
+        return path
