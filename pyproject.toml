@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "zdatasets"
-version = "0.0.5.dev1"
+version = "0.0.5.dev2"
 description = "Dataset SDK for consistent read/write [batch, online, streaming] data."
 classifiers = [
   "Development Status :: 2 - Pre-Alpha",
@@ -18,8 +18,8 @@ include = "datasets"
 # https://packaging.python.org/guides/creating-and-discovering-plugins/
 [tool.poetry.plugins]
 [tool.poetry.plugins."datasets.plugins"]
-batch_dataset = "datasets.plugins:BatchDatasetPlugin"
-batch_flow_dataset = "datasets.plugins:BatchFlowDatasetPlugin"
+batch_dataset = "datasets.plugins:BatchDataset"
+flow_dataset = "datasets.plugins:FlowDataset"
 
 [tool.poetry.plugins."datasets.executors"]
 metaflow_executor = "datasets.plugins:MetaflowExecutor"

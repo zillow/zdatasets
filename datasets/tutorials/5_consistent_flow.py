@@ -2,12 +2,11 @@ import os
 
 import pandas as pd
 from metaflow import FlowSpec, Parameter, step
-from pyspark import pandas as ps
 
 from datasets import DatasetType, Mode
 from datasets.context import Context
 from datasets.dataset_plugin import DatasetPlugin
-from datasets.plugins import BatchDatasetPlugin, MetaflowExecutor
+from datasets.plugins import BatchDataset, MetaflowExecutor
 from datasets.tutorials.online_plugin import DefaultOnlineDatasetPlugin
 
 
@@ -46,7 +45,7 @@ class ConsistentFlow(FlowSpec):
         if DatasetPlugin._executor.context == Context.ONLINE:
             assert isinstance(self.hello_ds, DefaultOnlineDatasetPlugin)
         else:
-            assert isinstance(self.hello_ds, BatchDatasetPlugin)
+            assert isinstance(self.hello_ds, BatchDataset)
 
         print(f"{type(read_df)=}")
         print(f"{read_df=}")

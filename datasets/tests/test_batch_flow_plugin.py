@@ -1,6 +1,6 @@
 from metaflow import Flow, namespace
 
-from datasets.plugins.batch.batch_flow_dataset_plugin import _get_run_id
+from datasets.plugins.batch.flow_dataset import _get_run_id
 from datasets.tests.test_tutorials import run_flow
 
 

@@ -1,14 +1,6 @@
 import logging
 from pathlib import Path
-from typing import (
-    TYPE_CHECKING,
-    Callable,
-    Iterable,
-    List,
-    Optional,
-    Tuple,
-    Union,
-)
+from typing import TYPE_CHECKING, Callable, List, Optional, Tuple, Union
 
 import pandas as pd
 
@@ -17,6 +9,7 @@ from datasets._typing import ColumnNames
 from datasets.context import Context
 from datasets.dataset_plugin import DatasetPlugin
 from datasets.exceptions import InvalidOperationException
+from datasets.plugins.batch.batch_base_plugin import BatchBasePlugin
 from datasets.utils.case_utils import pascal_to_snake_case
 
 
@@ -29,7 +22,7 @@ if TYPE_CHECKING:
 
 
 @DatasetPlugin.register(constructor_keys={"name"}, context=Context.BATCH)
-class BatchDatasetPlugin(DatasetPlugin, dict):
+class BatchDataset(BatchBasePlugin):
     """
     The default plugin for the BATCH execution context.
     """
@@ -46,59 +39,18 @@ class BatchDatasetPlugin(DatasetPlugin, dict):
         partition_by: Optional[ColumnNames] = None,
         path: Optional[Union[str, Path]] = None,
     ):
-        self.path = path
-        self.partition_by = partition_by
-        self.program_name = self._executor.current_program_name
-        super(BatchDatasetPlugin, self).__init__(
+        super(BatchDataset, self).__init__(
             name=name,
             logical_key=logical_key,
             columns=columns,
             run_id=run_id,
             mode=mode,
+            partition_by=partition_by,
         )
-        self._table_name = pascal_to_snake_case(name)
-
-        def set_name(key: str, value: Optional[object]):
-            if value:
-                self[key] = value
-
-        dict.__init__(self, name=name, mode=mode.name)
-        set_name("logical_key", logical_key)
-        set_name("columns", columns)
-        set_name("run_id", run_id)
-        set_name("partition_by", partition_by)
-        set_name("path", path)
-
-    @property
-    def path(self) -> str:
-        return self._path
-
-    @path.setter
-    def path(self, value: Optional[Union[str, Path]]):
-        if value:
-            self._path = str(value)
-        else:
-            self._path = value
-
-    def _get_filters_columns(
-        self,
-        columns: Optional[ColumnNames] = None,
-        run_id: Optional[str] = None,
-        partitions: Optional[dict] = None,
-    ) -> Tuple[Optional[list], Optional[Iterable[str]]]:
-        read_columns = self._get_read_columns(columns)
-        filters: Optional[List[Tuple]] = None
-        query_run_id = run_id if run_id else self.run_id
-        if query_run_id:
-            filters = [("run_id", "=", query_run_id)]
-
-        if partitions:
-            if filters is None:
-                filters = []
-            for key, value in partitions.items():
-                filters.append((key, "=", value))
-
-        return filters, read_columns
+        self.path = path
+        self._path: Optional[str] = path
+        if path:
+            self["path"] = path
 
     def to_spark_pandas(
         self,
@@ -124,20 +76,20 @@ class BatchDatasetPlugin(DatasetPlugin, dict):
             raise InvalidOperationException(f"Cannot read because mode={self.mode}")
 
         filters, read_columns = self._get_filters_columns(columns, run_id, partitions)
-        self.path = self._get_dataset_path()
+        self._path = self._get_dataset_path()
         _logger.info(f"to_pandas({self.path=}, {read_columns=}, {partitions=}, {run_id=}, {filters=})")
 
         df: pd.DataFrame
         if storage_format == "parquet":
             df = pd.read_parquet(
-                self.path,
+                self._path,
                 columns=read_columns,
                 filters=filters,
                 engine=kwargs.get("engine", "pyarrow"),
                 **kwargs,
             )
         elif storage_format == "csv":
-            df = pd.read_csv(self.path, usecols=read_columns, **kwargs)
+            df = pd.read_csv(self._path, usecols=read_columns, **kwargs)
         else:
             raise ValueError(f"{storage_format=} not supported.")
 
@@ -159,10 +111,10 @@ class BatchDatasetPlugin(DatasetPlugin, dict):
         import dask.dataframe as dd
 
         filters, read_columns = self._get_filters_columns(columns, run_id, partitions)
-        self.path = self._get_dataset_path()
-        _logger.info(f"to_dask({self.path=}, {read_columns=}, {partitions=}, {run_id=}, {filters=})")
+        self._path = self._get_dataset_path()
+        _logger.info(f"to_dask({self._path=}, {read_columns=}, {partitions=}, {run_id=}, {filters=})")
         return dd.read_parquet(
-            self.path,
+            self._path,
             columns=read_columns,
             filters=filters,
             engine=kwargs.get("engine", "pyarrow"),
@@ -185,7 +137,7 @@ class BatchDatasetPlugin(DatasetPlugin, dict):
         from pyspark.sql import DataFrame, SparkSession
 
         filters, read_columns = self._get_filters_columns(columns, run_id, partitions)
-        self.path = self._get_dataset_path()
+        self._path = self._get_dataset_path()
 
         read_columns = read_columns if read_columns else ["*"]
         if (self.run_id or run_id) and "*" not in read_columns and "run_id" not in read_columns:
@@ -195,8 +147,8 @@ class BatchDatasetPlugin(DatasetPlugin, dict):
             conf = SparkConf()
         spark_session: SparkSession = SparkSession.builder.config(conf=conf).getOrCreate()
 
-        _logger.info(f"to_spark({self.path=}, {read_columns=}, {partitions=}, {run_id=}, {filters=})")
-        df: DataFrame = spark_session.read.load(self.path, format=storage_format, **kwargs).select(
+        _logger.info(f"to_spark({self._path=}, {read_columns=}, {partitions=}, {run_id=}, {filters=})")
+        df: DataFrame = spark_session.read.load(self._path, format=storage_format, **kwargs).select(
             *read_columns
         )
 
@@ -223,45 +175,28 @@ class BatchDatasetPlugin(DatasetPlugin, dict):
                 f"data is of unsupported type {type(data)=}. Maybe PySpark/Dask is not installed?"
             )
 
-    def _partition_by_to_list(self, partition_by: Optional[ColumnNames] = None) -> List[str]:
-        def to_list(partitions: Optional[ColumnNames]) -> List[str]:
-            if partitions:
-                if isinstance(partitions, str):
-                    return partitions.split(",")
-                else:
-                    return partitions
-            else:
-                return list()
-
-        return to_list(partition_by) if partition_by else to_list(self.partition_by)
-
-    def _write_data_frame_prep(
-        self, df: Union[pd.DataFrame, "dd.DataFrame"], partition_by: Optional[ColumnNames] = None
-    ) -> List[str]:
-        if not (self.mode & Mode.WRITE):
-            raise InvalidOperationException(f"Cannot write because mode={self.mode}")
-
+    def _path_write_data_frame_prep(
+        self,
+        df: Union[pd.DataFrame, "dd.DataFrame", "SparkDataFrame"],
+        partition_by: Optional[ColumnNames] = None,
+    ) -> Tuple[Union[pd.DataFrame, "dd.DataFrame", "SparkDataFrame"], List[str]]:
         partition_cols: List[str] = self._partition_by_to_list(partition_by)
-
-        if self.path is None or "run_id" in partition_cols:
-            # Only partition on run_id if @dataset(path="s3://..") is not given
-            # or run_id is in partition_cols
+        if self.path is None:
+            # partition on run_id if @dataset(path="s3://..") is not given
             if "run_id" not in partition_cols:
                 partition_cols.append("run_id")
-            self.run_id = self._executor.current_run_id  # DO NOT ALLOW OVERWRITE OF ANOTHER RUN ID
-            # TODO: should I add run_time for latest run query scenario?
-            df["run_id"] = self.run_id
-        return partition_cols
+
+        return self._write_data_frame_prep(df, partition_cols)
 
     def write_dask(self, df: "dd.DataFrame", partition_by: Optional[ColumnNames] = None, **kwargs):
         import dask.dataframe as dd
 
-        partition_cols = self._write_data_frame_prep(df, partition_by=partition_by)
-        self.path = self._get_dataset_path()
-        _logger.info(f"write_dask({self.path=}, {partition_cols=})")
+        df, partition_cols = self._path_write_data_frame_prep(df, partition_by=partition_by)
+        self._path = self._get_dataset_path()
+        _logger.info(f"write_dask({self._path=}, {partition_cols=})")
         dd.to_parquet(
             df,
-            self.path,
+            self._path,
             engine=kwargs.get("engine", "pyarrow"),
             compression=kwargs.get("compression", "snappy"),
             partition_on=partition_cols,
@@ -271,11 +206,11 @@ class BatchDatasetPlugin(DatasetPlugin, dict):
         )
 
     def write_pandas(self, df: pd.DataFrame, partition_by: Optional[ColumnNames] = None, **kwargs):
-        partition_cols = self._write_data_frame_prep(df, partition_by=partition_by)
-        self.path = self._get_dataset_path()
-        _logger.info(f"write_pandas({self.path=}, {partition_cols=})")
+        df, partition_cols = self._path_write_data_frame_prep(df, partition_by=partition_by)
+        self._path = self._get_dataset_path()
+        _logger.info(f"write_pandas({self._path=}, {partition_cols=})")
         df.to_parquet(
-            self.path,
+            self._path,
             engine=kwargs.get("engine", "pyarrow"),
             compression=kwargs.get("compression", "snappy"),
             partition_cols=partition_cols,
@@ -291,28 +226,13 @@ class BatchDatasetPlugin(DatasetPlugin, dict):
         )
 
     def write_spark(self, df: "SparkDataFrame", partition_by: Optional[ColumnNames] = None, **kwargs):
-        from pyspark.sql.functions import lit
-
-        if not (self.mode & Mode.WRITE):
-            raise InvalidOperationException(f"Cannot write because mode={self.mode}")
-
-        partition_cols: List[str] = self._partition_by_to_list(partition_by)
-
-        if self.path is None or "run_id" in partition_cols:
-            # Only partition on run_id if @dataset(path="s3://..") is not given
-            # or run_id is in partition_cols
-            if "run_id" not in partition_cols:
-                partition_cols.append("run_id")
-            self.run_id = self._executor.current_run_id  # DO NOT ALLOW OVERWRITE OF ANOTHER RUN ID
-            df = df.withColumn("run_id", lit(self.run_id))
-
-        # set after checking: self.path is None
-        self.path = self._get_dataset_path()
-        _logger.info(f"write_spark({self.path=}, {partition_cols=})")
+        df, partition_cols = self._path_write_data_frame_prep(df, partition_by=partition_by)
+        self._path = self._get_dataset_path()
+        _logger.info(f"write_spark({self._path=}, {partition_cols=})")
 
         # TODO: should mode=overwrite be the default policy??
         df.write.options(**kwargs).mode(kwargs.get("mode", "overwrite")).parquet(
-            path=self.path,
+            path=self._path,
             partitionBy=partition_cols,
             compression=kwargs.get("compression", "snappy"),
         )
@@ -322,21 +242,21 @@ class BatchDatasetPlugin(DatasetPlugin, dict):
         cls._dataset_path_func = func
 
     def _get_dataset_path(self) -> str:
-        if self.path is not None:
-            return self.path
+        if self._path is not None:
+            return self._path
         else:
-            if BatchDatasetPlugin._dataset_path_func:
-                return BatchDatasetPlugin._dataset_path_func(self)
+            if BatchDataset._dataset_path_func:
+                return BatchDataset._dataset_path_func(self)
             else:
                 return str(
                     Path(self._executor.datastore_path)
                     / "datastore"
                     / (self.program_name if self.program_name else self._executor.current_program_name)
-                    / self._table_name
+                    / pascal_to_snake_case(self.name)
                 )
 
     def __repr__(self):
         return (
-            f"BatchDatasetPlugin({self.name=},{self.key=},{self.partition_by=},"
-            f"{self.run_id=},{self.columns=},{self.path=},{self._table_name=})"
+            f"BatchPlugin({self.name=},{self.key=},{self.partition_by=},"
+            f"{self.run_id=},{self.columns=},{self.path=},{self._path=})"
         )

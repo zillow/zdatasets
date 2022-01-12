@@ -3,7 +3,7 @@ from typing import TYPE_CHECKING, Optional, Tuple
 from datasets._typing import ColumnNames
 from datasets.context import Context
 from datasets.dataset_plugin import DatasetPlugin
-from datasets.plugins import BatchDatasetPlugin
+from datasets.plugins import BatchDataset
 
 
 if TYPE_CHECKING:
@@ -11,7 +11,7 @@ if TYPE_CHECKING:
 
 
 @DatasetPlugin.register(constructor_keys={"flow_dataset"}, context=Context.BATCH)
-class BatchFlowDatasetPlugin(BatchDatasetPlugin):
+class FlowDataset(BatchDataset):
     def __init__(
         self,
         flow_dataset: str,
@@ -32,7 +32,7 @@ class BatchFlowDatasetPlugin(BatchDatasetPlugin):
 
         dataset = getattr(run.data, self.dataset_name)
 
-        super(BatchFlowDatasetPlugin, self).__init__(
+        super(FlowDataset, self).__init__(
             name=dataset.name,
             logical_key=dataset.key,
             columns=columns,
