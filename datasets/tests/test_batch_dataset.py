@@ -62,6 +62,7 @@ def df() -> pd.DataFrame:
 
 def test_from_keys_offline_plugin(dataset: BatchDataset, path: str):
     assert dataset.name == "Ds1"
+    assert dataset.hive_table_name == "ds_1"
     assert dataset.key == "my_key"
     assert dataset.path == path
     assert dataset.partition_by == "col1,run_id"
@@ -226,21 +227,21 @@ def test_write_unsupported_data_type(dataset: BatchDataset):
 
 @pytest.mark.parametrize("path", [None])
 @pytest.mark.parametrize("name", ["MyTable"])
-def test_zillow_dataset_path_plugin(dataset: BatchDataset, df: pd.DataFrame):
-    # import registers it!
-    from datasets.plugins.batch.zillow_batch_path import (
-        _get_batch_dataset_path,
-    )
-
+def test_register_dataset_path_plugin(dataset: BatchDataset, df: pd.DataFrame):
     dataset.write(df.copy())
 
     assert dataset.name == "MyTable"
-
-    BatchDataset._register_dataset_path_func(_get_batch_dataset_path)
     path = dataset._get_dataset_path()
     assert path.endswith("datasets/tests/data/datastore/my_program/my_table")
+
+    def test_dataset_path_func(passed_dataset: BatchDataset) -> str:
+        return "fee_foo"
+
+    BatchDataset.register_dataset_path_func(test_dataset_path_func)
 
     os.environ["ZODIAC_SERVICE"] = "test_service"
     dataset._path = None
     path = dataset._get_dataset_path()
-    assert path.endswith("datasets/tests/data/datastore/test_service/my_program/my_table")
+    assert path.endswith("fee_foo")
+
+    BatchDataset.register_dataset_path_func(None)

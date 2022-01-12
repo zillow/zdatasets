@@ -1,19 +1,20 @@
 import logging
 from pathlib import Path
-from typing import TYPE_CHECKING, Callable, List, Optional, Tuple, Union
+from typing import TYPE_CHECKING, List, Optional, Tuple, Union
 
 import pandas as pd
 
 from datasets import Mode
 from datasets._typing import ColumnNames
 from datasets.context import Context
-from datasets.dataset_plugin import DatasetPlugin
+from datasets.dataset_plugin import DatasetPlugin, dataset_name_validator
 from datasets.exceptions import InvalidOperationException
 from datasets.plugins.batch.batch_base_plugin import BatchBasePlugin
 from datasets.utils.case_utils import pascal_to_snake_case
 
 
 _logger = logging.getLogger(__name__)
+_logger.setLevel(logging.INFO)
 
 if TYPE_CHECKING:
     import dask.dataframe as dd
@@ -27,8 +28,6 @@ class BatchDataset(BatchBasePlugin):
     The default plugin for the BATCH execution context.
     """
 
-    _dataset_path_func: Callable = None
-
     def __init__(
         self,
         name: str,
@@ -39,8 +38,10 @@ class BatchDataset(BatchBasePlugin):
         partition_by: Optional[ColumnNames] = None,
         path: Optional[Union[str, Path]] = None,
     ):
+        dataset_name_validator(name)
         super(BatchDataset, self).__init__(
             name=name,
+            hive_table_name=pascal_to_snake_case(name),
             logical_key=logical_key,
             columns=columns,
             run_id=run_id,
@@ -236,24 +237,6 @@ class BatchDataset(BatchBasePlugin):
             partitionBy=partition_cols,
             compression=kwargs.get("compression", "snappy"),
         )
-
-    @classmethod
-    def _register_dataset_path_func(cls, func: Callable):
-        cls._dataset_path_func = func
-
-    def _get_dataset_path(self) -> str:
-        if self._path is not None:
-            return self._path
-        else:
-            if BatchDataset._dataset_path_func:
-                return BatchDataset._dataset_path_func(self)
-            else:
-                return str(
-                    Path(self._executor.datastore_path)
-                    / "datastore"
-                    / (self.program_name if self.program_name else self._executor.current_program_name)
-                    / pascal_to_snake_case(self.name)
-                )
 
     def __repr__(self):
         return (
