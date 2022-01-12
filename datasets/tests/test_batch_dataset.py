@@ -12,7 +12,7 @@ from datasets import Mode
 from datasets.context import Context
 from datasets.dataset_plugin import DatasetPlugin
 from datasets.exceptions import InvalidOperationException
-from datasets.plugins.batch.batch_dataset_plugin import BatchDatasetPlugin
+from datasets.plugins.batch.batch_dataset import BatchDataset
 
 
 csv_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "data/pandas.csv")
@@ -60,16 +60,15 @@ def df() -> pd.DataFrame:
     return pd.DataFrame(data)
 
 
-def test_from_keys_offline_plugin(dataset: BatchDatasetPlugin, path: str):
+def test_from_keys_offline_plugin(dataset: BatchDataset, path: str):
     assert dataset.name == "Ds1"
-    assert dataset._table_name == "ds_1"
     assert dataset.key == "my_key"
     assert dataset.path == path
     assert dataset.partition_by == "col1,run_id"
 
 
 @pytest.mark.parametrize("mode", [Mode.WRITE])
-def test_from_read_on_mode_write(dataset: BatchDatasetPlugin, df: pd.DataFrame):
+def test_from_read_on_mode_write(dataset: BatchDataset, df: pd.DataFrame):
     with pytest.raises(InvalidOperationException) as exec_info:
         dataset.to_pandas(columns="col1,col2")
 
@@ -78,7 +77,7 @@ def test_from_read_on_mode_write(dataset: BatchDatasetPlugin, df: pd.DataFrame):
 
 @pytest.mark.parametrize("path", [None])
 @pytest.mark.parametrize("partition_by", ["col1,col3"])
-def test_to_pandas(dataset: BatchDatasetPlugin, df: pd.DataFrame):
+def test_to_pandas(dataset: BatchDataset, df: pd.DataFrame):
     dataset.write(df.copy())
     read_df = dataset.to_pandas(columns="col1,col2,col3")
     assert (df == read_df).all().all()
@@ -96,7 +95,7 @@ def test_to_pandas(dataset: BatchDatasetPlugin, df: pd.DataFrame):
 
 
 @pytest.mark.parametrize("path", [csv_path])
-def test_default_plugin_pandas_csv(dataset: BatchDatasetPlugin, df: pd.DataFrame):
+def test_default_plugin_pandas_csv(dataset: BatchDataset, df: pd.DataFrame):
     shutil.rmtree(csv_path, ignore_errors=True)
     df.to_csv(csv_path)
     read_df = dataset.to_pandas(columns="col1,col2,col3", storage_format="csv")
@@ -104,14 +103,14 @@ def test_default_plugin_pandas_csv(dataset: BatchDatasetPlugin, df: pd.DataFrame
     shutil.rmtree(csv_path, ignore_errors=True)
 
 
-def test_to_pandas_unsupported_format(dataset: BatchDatasetPlugin):
+def test_to_pandas_unsupported_format(dataset: BatchDataset):
     with pytest.raises(ValueError) as exec_info:
         dataset.to_pandas(storage_format="foo")
 
     assert "foo" in str(exec_info.value)
 
 
-def test_to_pandas_mode_read(dataset: BatchDatasetPlugin, df: pd.DataFrame):
+def test_to_pandas_mode_read(dataset: BatchDataset, df: pd.DataFrame):
     dataset.write(df)
 
     def test_read():
@@ -125,15 +124,16 @@ def test_to_pandas_mode_read(dataset: BatchDatasetPlugin, df: pd.DataFrame):
 @pytest.mark.parametrize("path", [None])
 @pytest.mark.parametrize("partition_by", ["col1,col3", ["col1", "col3"]])
 @pytest.mark.parametrize("mode", [Mode.WRITE, Mode.READ_WRITE])
-def test_get_dataset_path(dataset: BatchDatasetPlugin, df: pd.DataFrame):
+def test_get_dataset_path(dataset: BatchDataset, df: pd.DataFrame):
     dataset.write(df.copy())
-    assert dataset.path.endswith("datasets/tests/data/datastore/my_program/ds_1")
-    os.path.exists(f"{dataset.path}/col1=A/col3=A1")
-    shutil.rmtree(dataset.path)
+    path = dataset._get_dataset_path()
+    assert path.endswith("datasets/tests/data/datastore/my_program/ds_1")
+    os.path.exists(f"{path}/col1=A/col3=A1")
+    shutil.rmtree(path)
 
 
 @pytest.mark.parametrize("mode", [Mode.READ])
-def test_write_on_read_only_pandas(dataset: BatchDatasetPlugin):
+def test_write_on_read_only_pandas(dataset: BatchDataset):
     df = pd.DataFrame({"col1": ["A", "A", "A", "B", "B", "B"], "col2": [1, 2, 3, 4, 5, 6]})
     with pytest.raises(InvalidOperationException):
         dataset.write(df.copy())
@@ -142,7 +142,7 @@ def test_write_on_read_only_pandas(dataset: BatchDatasetPlugin):
 @pytest.mark.parametrize("path", [None])
 @pytest.mark.parametrize("partition_by", ["col1"])
 @pytest.mark.parametrize("name", ["DsDask"])
-def test_offline_plugin_dask(dataset: BatchDatasetPlugin, df):
+def test_offline_plugin_dask(dataset: BatchDataset, df):
     data = dd.from_pandas(df, npartitions=1)
     assert "dask.dataframe.core.DataFrame" in str(type(data))
     dataset.write(data)
@@ -151,14 +151,14 @@ def test_offline_plugin_dask(dataset: BatchDatasetPlugin, df):
 
 
 @pytest.mark.parametrize("mode", [Mode.READ])
-def test_write_on_read_only_dask(dataset: BatchDatasetPlugin, df):
+def test_write_on_read_only_dask(dataset: BatchDataset, df):
     data = dd.from_pandas(df, npartitions=1)
     with pytest.raises(InvalidOperationException):
         dataset.write(data)
 
 
 @pytest.mark.parametrize("mode", [Mode.WRITE])
-def test_read_on_write_only_dask(dataset: BatchDatasetPlugin, df):
+def test_read_on_write_only_dask(dataset: BatchDataset, df):
     with pytest.raises(InvalidOperationException):
         dataset.to_dask(columns="col1")
 
@@ -166,7 +166,7 @@ def test_read_on_write_only_dask(dataset: BatchDatasetPlugin, df):
 @pytest.mark.parametrize("path", [None])
 @pytest.mark.parametrize("partition_by", ["col1,col3"])
 @pytest.mark.spark
-def test_to_spark(dataset: BatchDatasetPlugin, df: pd.DataFrame, spark_session):
+def test_to_spark(dataset: BatchDataset, df: pd.DataFrame, spark_session):
     sdf: SparkDataFrame = ps.from_pandas(df).to_spark()
     assert isinstance(sdf, SparkDataFrame)
     dataset.write(sdf)
@@ -185,7 +185,7 @@ def test_to_spark(dataset: BatchDatasetPlugin, df: pd.DataFrame, spark_session):
 
 @pytest.mark.spark
 @pytest.mark.parametrize("mode", [Mode.READ])
-def test_write_on_read_only_spark(dataset: BatchDatasetPlugin):
+def test_write_on_read_only_spark(dataset: BatchDataset):
     df = pd.DataFrame({"col1": ["A", "A", "A", "B", "B", "B"], "col2": [1, 2, 3, 4, 5, 6]})
     spark_df: SparkDataFrame = ps.from_pandas(df).to_spark()
     with pytest.raises(InvalidOperationException):
@@ -194,7 +194,7 @@ def test_write_on_read_only_spark(dataset: BatchDatasetPlugin):
 
 @pytest.mark.spark
 @pytest.mark.parametrize("mode", [Mode.WRITE])
-def test_read_on_write_only_spark(dataset: BatchDatasetPlugin, df):
+def test_read_on_write_only_spark(dataset: BatchDataset, df):
     df: SparkDataFrame = ps.from_pandas(df).to_spark()
     dataset.write(df)
     with pytest.raises(InvalidOperationException):
@@ -202,7 +202,7 @@ def test_read_on_write_only_spark(dataset: BatchDatasetPlugin, df):
 
 
 @pytest.mark.spark
-def test_default_plugin_spark_pandas(dataset: BatchDatasetPlugin, df: pd.DataFrame, spark_session):
+def test_default_plugin_spark_pandas(dataset: BatchDataset, df: pd.DataFrame, spark_session):
     dataset.write(ps.from_pandas(df))
     read_psdf: ps.DataFrame = dataset.to_spark_pandas()
     assert isinstance(read_psdf, ps.DataFrame)
@@ -212,13 +212,13 @@ def test_default_plugin_spark_pandas(dataset: BatchDatasetPlugin, df: pd.DataFra
 
 @pytest.mark.parametrize("mode", [Mode.READ])
 @pytest.mark.spark
-def test_write_on_read_only_spark_pandas(dataset: BatchDatasetPlugin):
+def test_write_on_read_only_spark_pandas(dataset: BatchDataset):
     df = pd.DataFrame({"col1": ["A", "A", "A", "B", "B", "B"], "col2": [1, 2, 3, 4, 5, 6]})
     with pytest.raises(InvalidOperationException):
         dataset.write(ps.from_pandas(df))
 
 
-def test_write_unsupported_data_type(dataset: BatchDatasetPlugin):
+def test_write_unsupported_data_type(dataset: BatchDataset):
     data = {}
     with pytest.raises(ValueError):
         dataset.write(data)
@@ -226,22 +226,21 @@ def test_write_unsupported_data_type(dataset: BatchDatasetPlugin):
 
 @pytest.mark.parametrize("path", [None])
 @pytest.mark.parametrize("name", ["MyTable"])
-def test_zillow_dataset_path_plugin(dataset: BatchDatasetPlugin, df: pd.DataFrame):
+def test_zillow_dataset_path_plugin(dataset: BatchDataset, df: pd.DataFrame):
     # import registers it!
-    from datasets.plugins.batch.zillow_dataset_path import (
+    from datasets.plugins.batch.zillow_batch_path import (
         _get_batch_dataset_path,
     )
 
     dataset.write(df.copy())
 
     assert dataset.name == "MyTable"
-    assert dataset._table_name == "my_table"
 
-    BatchDatasetPlugin._register_dataset_path_func(_get_batch_dataset_path)
+    BatchDataset._register_dataset_path_func(_get_batch_dataset_path)
     path = dataset._get_dataset_path()
     assert path.endswith("datasets/tests/data/datastore/my_program/my_table")
 
     os.environ["ZODIAC_SERVICE"] = "test_service"
-    dataset.path = None
+    dataset._path = None
     path = dataset._get_dataset_path()
     assert path.endswith("datasets/tests/data/datastore/test_service/my_program/my_table")

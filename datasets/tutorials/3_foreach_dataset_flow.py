@@ -4,7 +4,7 @@ import pandas as pd  # type: ignore
 from metaflow import FlowSpec, step
 
 from datasets import Mode, dataset
-from datasets.plugins import BatchDatasetPlugin
+from datasets.plugins import BatchDataset
 
 
 flow_dir = os.path.dirname(os.path.realpath(__file__))
@@ -32,7 +32,7 @@ class ForeachDatasetFlow(FlowSpec):
         print(f"saving: {self.input=}")
 
         # Example of writing to a dataset with a path within a foreach split
-        self.my_dataset: BatchDatasetPlugin
+        self.my_dataset: BatchDataset
         self.my_dataset.write_pandas(df)
 
         self.next(self.join_step)

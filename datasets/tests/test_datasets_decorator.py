@@ -1,7 +1,7 @@
 import pytest
 
 from datasets import dataset
-from datasets.plugins import BatchDatasetPlugin
+from datasets.plugins import BatchDataset
 
 
 def test_step_decorator():
@@ -9,12 +9,12 @@ def test_step_decorator():
         @dataset(name="DsFee")
         def hi(self):
             assert self.ds_fee.name == "DsFee"
-            assert isinstance(self.ds_fee, BatchDatasetPlugin)
+            assert isinstance(self.ds_fee, BatchDataset)
 
     foo = Foo()
     foo.hi()
     assert foo.ds_fee.name == "DsFee"
-    assert isinstance(foo.ds_fee, BatchDatasetPlugin)
+    assert isinstance(foo.ds_fee, BatchDataset)
 
 
 def test_step_decorator_class_field_name():
@@ -24,12 +24,12 @@ def test_step_decorator_class_field_name():
         @dataset(name=ds_name, field_name="ds_fee")
         def hi(self):
             assert self.ds_fee.name == ds_name
-            assert isinstance(self.ds_fee, BatchDatasetPlugin)
+            assert isinstance(self.ds_fee, BatchDataset)
 
     foo = Foo()
     foo.hi()
     assert foo.ds_fee.name == ds_name
-    assert isinstance(foo.ds_fee, BatchDatasetPlugin)
+    assert isinstance(foo.ds_fee, BatchDataset)
 
 
 def test_step_decorator_class_bad_name():

@@ -3,7 +3,7 @@ import pytest
 
 from datasets.context import Context
 from datasets.dataset_plugin import DatasetPlugin
-from datasets.plugins import BatchDatasetPlugin
+from datasets.plugins import BatchDataset
 from datasets.tests.conftest import TestExecutor
 
 
@@ -60,7 +60,7 @@ def test_from_keys_dataset_factory_latency():
 
 def test_from_keys():
     dataset = DatasetPlugin.from_keys(name="Foo")
-    assert isinstance(dataset, BatchDatasetPlugin)
+    assert isinstance(dataset, BatchDataset)
 
     dataset = DatasetPlugin.from_keys(test_name="Foo")
     assert dataset.name == "Foo"
@@ -86,7 +86,7 @@ def test_from_keys():
 def test_from_keys_consistent_access():
     dataset = DatasetPlugin.from_keys(name="Foo")
     assert dataset.name == "Foo"
-    assert isinstance(dataset, BatchDatasetPlugin)
+    assert isinstance(dataset, BatchDataset)
 
     TestExecutor.current_context = Context.STREAMING
     dataset = DatasetPlugin.from_keys(name="Foo")
