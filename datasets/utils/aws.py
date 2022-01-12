@@ -4,7 +4,6 @@ from typing import Iterable, Optional, Tuple
 from urllib.parse import ParseResult, urlparse
 
 import boto3
-import botocore.exceptions
 from botocore.credentials import (
     AssumeRoleCredentialFetcher,
     DeferredRefreshableCredentials,
@@ -100,28 +99,6 @@ def get_paginated_list_objects_iterator(
     # kwargs same as list_objects usage: Bucket, Prefix, etc.
     page_iterator = paginator.paginate(**kwargs)
     return page_iterator.search(search) if search else page_iterator
-
-
-def check_s3_path_existence(s3_client: boto3.session.Session.client, s3_path: str) -> bool:
-    """
-    Check if file path exists in s3
-    Args:
-        s3_client: boto3 client
-        s3_path: path to check
-
-    Returns: True if exists else False
-    """
-    bucket, prefix = get_s3_bucket_key(s3_path)
-    try:
-        s3_client.head_object(Bucket=bucket, Key=prefix)
-    except botocore.exceptions.ClientError as e:
-        if e.response["ResponseMetadata"]["HTTPStatusCode"] == 404:
-            return False
-        else:
-            _logger.error(f"Error when checking s3 file existence: {e.response}")
-            raise
-    else:
-        return True
 
 
 def get_s3_bucket_key(path: str) -> Tuple[str, str]:

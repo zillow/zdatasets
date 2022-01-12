@@ -1,30 +1,23 @@
 from pathlib import Path
 from typing import List
-from unittest.mock import Mock, patch
 
 import pytest
+from moto import mock_s3, mock_sts
 
+from datasets.utils.aws import get_aws_client
 from datasets.utils.partitions import Partition, get_path_partitions
 
 
 @pytest.fixture
 def assume_role() -> str:
-    return "arn:aws:iam::170606514770:role/dev-zestimate-role"
+    return "arn:aws:iam::333333333333:role/test-role"
 
 
 @pytest.fixture
-def s3_response() -> list:
+def region_partitioned_paths() -> List[str]:
     return [
-        {"Prefix": "aip/kfp/aip-kfp-example/data/models/region=king/"},
-        {"Prefix": "aip/kfp/aip-kfp-example/data/models/region=la/"},
-    ]
-
-
-@pytest.fixture
-def s3_response_dates() -> list:
-    return [
-        {"Prefix": "aip/kfp/aip-kfp-example/data/date=2020-07-23/models/region=king/"},
-        {"Prefix": "aip/kfp/aip-kfp-example/data/date=2020-07-23/models/region=la/"},
+        "data/models/region=king/",
+        "data/models/region=la/",
     ]
 
 
@@ -52,29 +45,17 @@ def test_get_path_partitions_suffix(data_path: Path, assume_role: str):
     ]
 
 
-@patch("datasets.utils.partitions.get_aws_client")
-def test_load_partitions_s3(get_aws_client_mock: Mock, assume_role: str, s3_response: list):
-    mocked_s3_client = get_aws_client_mock.return_value
-    mocked_s3_client.get_paginator.return_value.paginate.return_value.search = Mock(
-        return_value=iter(s3_response)
-    )
+@pytest.mark.parametrize("assume_role", [None, "arn:aws:iam::333333333333:role/test-role"])
+@mock_sts
+@mock_s3
+def test_load_partitions_s3(assume_role: str, region_partitioned_paths: List[str]):
+    bucket_name = "test-bucket"
+    path = f"s3://{bucket_name}/data/models/"
+    s3 = get_aws_client(assume_role, "s3")
+    s3.create_bucket(Bucket=bucket_name, CreateBucketConfiguration={"LocationConstraint": "us-west-2"})
+    for region_path in region_partitioned_paths:
+        s3.put_object(Bucket=bucket_name, Key=region_path, Body="foo")
 
-    path = "s3://workspace-zillow-analytics-stage/aip/kfp/aip-kfp-example/data/models/"
-    ret: List[Partition] = get_path_partitions(path, assume_role)
-    assert ret == [
-        Partition(name="king", path=path + "region=king/"),
-        Partition(name="la", path=path + "region=la/"),
-    ]
-
-
-@patch("datasets.utils.partitions.get_aws_client")
-def test_load_partitions_s3_dates(get_aws_client_mock: Mock, assume_role: str, s3_response_dates: list):
-    mocked_s3_client = get_aws_client_mock.return_value
-    mocked_s3_client.get_paginator.return_value.paginate.return_value.search = Mock(
-        return_value=iter(s3_response_dates)
-    )
-
-    path = "s3://workspace-zillow-analytics-stage/aip/kfp/aip-kfp-example/data/date=2020-07-23/models/"
     ret: List[Partition] = get_path_partitions(path, assume_role)
     assert ret == [
         Partition(name="king", path=path + "region=king/"),
