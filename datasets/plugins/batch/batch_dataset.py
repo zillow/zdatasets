@@ -10,6 +10,7 @@ from datasets.context import Context
 from datasets.dataset_plugin import DatasetPlugin, dataset_name_validator
 from datasets.exceptions import InvalidOperationException
 from datasets.plugins.batch.batch_base_plugin import BatchBasePlugin
+from datasets.utils.case_utils import pascal_to_snake_case
 
 
 _logger = logging.getLogger(__name__)

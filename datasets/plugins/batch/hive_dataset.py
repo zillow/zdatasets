@@ -1,5 +1,5 @@
 import logging
-from typing import TYPE_CHECKING, Optional, Union
+from typing import TYPE_CHECKING, List, Optional, Union
 
 import pandas as pd
 
@@ -13,6 +13,7 @@ from datasets.utils.case_utils import snake_case_to_pascal
 
 
 _logger = logging.getLogger(__name__)
+_logger.setLevel(logging.INFO)
 
 if TYPE_CHECKING:
     from pyspark import SparkConf, pandas as ps
@@ -39,6 +40,7 @@ class HiveDataset(BatchBasePlugin):
 
         super(HiveDataset, self).__init__(
             name=name if name else snake_case_to_pascal(hive_table),
+            hive_table_name=hive_table,
             logical_key=logical_key,
             columns=columns,
             run_id=run_id,
@@ -79,10 +81,10 @@ class HiveDataset(BatchBasePlugin):
         if (self.run_id or run_id) and "*" not in read_columns and "run_id" not in read_columns:
             read_columns.append("run_id")
 
-        spark_session: SparkSession = self._get_or_create_spark_session(conf=kwargs.get("conf", None))
+        spark_session: SparkSession = HiveDataset._get_or_create_spark_session(conf)
 
-        print(f"to_spark({self.hive_table=}, {read_columns=}, {partitions=}, {run_id=}, {filters=})")
-        df: DataFrame = spark_session.read.table(self.hive_table).select(*read_columns)
+        _logger.info(f"to_spark({self.hive_table=}, {read_columns=}, {partitions=}, {run_id=}, {filters=})")
+        df: DataFrame = spark_session.read.options(**kwargs).table(self.hive_table).select(*read_columns)
 
         if filters:
             for name, _, val in filters:
@@ -114,7 +116,8 @@ class HiveDataset(BatchBasePlugin):
             **kwargs,
         )
 
-    def _get_or_create_spark_session(self, conf: "SparkConf" = None) -> "SparkSession":
+    @staticmethod
+    def _get_or_create_spark_session(conf: "Optional[SparkConf]" = None) -> "SparkSession":
         from pyspark import SparkConf
         from pyspark.sql import SparkSession
 
@@ -122,10 +125,37 @@ class HiveDataset(BatchBasePlugin):
             conf = SparkConf()
         return SparkSession.builder.config(conf=conf).enableHiveSupport().getOrCreate()
 
-    def write_spark(self, df: "SparkDataFrame", partition_by: Optional[ColumnNames] = None, **kwargs):
+    def write_spark(
+        self,
+        df: "SparkDataFrame",
+        partition_by: Optional[ColumnNames] = None,
+        conf: Optional["SparkConf"] = None,
+        **kwargs,
+    ):
+        spark: SparkSession = HiveDataset._get_or_create_spark_session(conf)
+        table_exists: bool = spark.sql(f"SHOW TABLES LIKE '{self.hive_table}'").count() == 1
+        if table_exists:
+            # Query for partition information,
+            # for self._write_data_frame_prep() to add run_id if needed
+            from pyspark import Row
+
+            desc_df: SparkDataFrame = spark.sql(f"desc {self.hive_table}")
+            partition_list: List[Row] = desc_df.select(desc_df.col_name).collect()
+            print(f"{partition_list=}")
+
+            partition_index: Optional[int] = None
+            for index, item in enumerate(partition_list):
+                if item[0] == "# Partition Information":
+                    partition_index = index + 2
+                    break
+            if partition_index:
+                partition_by = [row[0] for row in partition_list[partition_index:]]
+            else:
+                partition_by = None
+            print(f"{partition_by=}")
+
         df, partition_cols = self._write_data_frame_prep(df, partition_by=partition_by)
         _logger.info(f"write_spark({self.hive_table=}, {partition_cols=})")
-        print(f"write_spark({self.hive_table=}, {partition_cols=})")
 
         # About <.mode("append")>:
         #  - SaveMode.Append	"append":
@@ -135,20 +165,21 @@ class HiveDataset(BatchBasePlugin):
         #      Overwrite mode means that when saving a DataFrame to a data source,
         #      if data/table already exists, existing data is expected to be overwritten
         #      by the contents of the DataFrame.
-
-        # TODO: Policy question, if the table does not exist:
-        #   Should "run_id" be added to partition_cols by default?
-
-        # TODO: if the table already exists, then don't set [path, mode, partitionBy]
-        # TODO: add unit test of existing hive table with different than expected path
-        self._get_or_create_spark_session(conf=kwargs.get("conf", None))
-        (
-            df.write.option("path", self._get_dataset_path())
-            .options(**kwargs)
-            .mode("append")
-            .partitionBy(partition_cols)
-            .saveAsTable(self.hive_table)
-        )
+        if table_exists:
+            (
+                df.select(spark.table(self.hive_table).columns)
+                .write.options(**kwargs)
+                .insertInto(self.hive_table)
+            )
+        else:
+            _logger.info(f"{self.hive_table=} does not exist: creating!")
+            (
+                df.write.mode("append")
+                .option("path", self._get_dataset_path())
+                .partitionBy(partition_cols)
+                .options(**kwargs)
+                .saveAsTable(self.hive_table)
+            )
 
     def __repr__(self):
         return (

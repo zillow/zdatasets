@@ -39,12 +39,13 @@ class BatchBasePlugin(DatasetPlugin, dict):
         logical_key: str = None,
         columns: Optional[ColumnNames] = None,
         run_id: Optional[str] = None,
-        mode: Mode = Mode.READ,
+        mode: Union[Mode, str] = Mode.READ,
         partition_by: Optional[ColumnNames] = None,
     ):
         self.hive_table_name = hive_table_name
         self.partition_by = partition_by
         self.program_name = self._executor.current_program_name
+        self._path: Optional[str] = None
         super(BatchBasePlugin, self).__init__(
             name=name,
             logical_key=logical_key,
