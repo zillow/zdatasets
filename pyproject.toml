@@ -44,6 +44,7 @@ pytest-cov = "^2.12.1"
 seed-isort-config = "^2.2"
 pre-commit = "^2.15"
 pytest-depends = "^1.0.1"
+moto = {extras = ["s3"], version = "^2.3.1"}
 
 [tool.poetry.extras]
 doc = ["sphinx", "sphinx_rtd_theme"]

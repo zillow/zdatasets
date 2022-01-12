@@ -62,6 +62,7 @@ def df() -> pd.DataFrame:
 
 def test_from_keys_offline_plugin(dataset: BatchDatasetPlugin, path: str):
     assert dataset.name == "Ds1"
+    assert dataset._table_name == "ds_1"
     assert dataset.key == "my_key"
     assert dataset.path == path
     assert dataset.partition_by == "col1,run_id"
@@ -126,7 +127,7 @@ def test_to_pandas_mode_read(dataset: BatchDatasetPlugin, df: pd.DataFrame):
 @pytest.mark.parametrize("mode", [Mode.WRITE, Mode.READ_WRITE])
 def test_get_dataset_path(dataset: BatchDatasetPlugin, df: pd.DataFrame):
     dataset.write(df.copy())
-    assert dataset.path.endswith("datasets/tests/data/datastore/my_program/ds1")
+    assert dataset.path.endswith("datasets/tests/data/datastore/my_program/ds_1")
     os.path.exists(f"{dataset.path}/col1=A/col3=A1")
     shutil.rmtree(dataset.path)
 

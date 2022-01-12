@@ -17,5 +17,5 @@ def is_upper_pascal_case(name: str) -> bool:
 
 def pascal_to_snake_case(name: str) -> str:
     assert is_upper_pascal_case(name)
-    snake = [f"_{c.lower()}" if c.isupper() else c for c in name]
+    snake = [f"_{c.lower()}" if c.isupper() or not c.isalpha() else c for c in name]
     return "".join(snake).lstrip("_")
