@@ -5,7 +5,6 @@ import pytest
 from pandas._testing import assert_frame_equal
 from pyspark import pandas as ps
 from pyspark.sql import DataFrame as SparkDataFrame, SparkSession
-from pyspark.sql.utils import AnalysisException
 
 from datasets import Mode
 from datasets.context import Context
@@ -87,7 +86,6 @@ def test_hive_to_spark(dataset: HiveDataset, df: pd.DataFrame, spark_session: Sp
     data = {"col1": ["C"], "col2": [8], "col3": ["C1"]}
     dataset.write(pd.DataFrame(data))
     read_spdf = dataset.to_spark_pandas()
-    print(f"{len(read_spdf)=}")
 
     assert read_spdf.columns.to_list() == ["col1", "col2", "col3"]
 
@@ -108,28 +106,58 @@ def test_hive_to_spark(dataset: HiveDataset, df: pd.DataFrame, spark_session: Sp
     assert df3["col3"].unique().tolist() == ["C1"]
 
 
+@pytest.mark.parametrize("hive_table", ["test_hive_write_existing_table_run_id"])
+@pytest.mark.parametrize("partition_by", ["col1,run_id"])
+@pytest.mark.parametrize("columns", ["col1,col2,col3,run_id"])
 @pytest.mark.spark
-def test_hive_write_existing_table(
-    dataset: HiveDataset, df: pd.DataFrame, spark_session: SparkSession, data_path: Path
+def test_hive_write_existing_table_run_id(
+    dataset: HiveDataset, df: pd.DataFrame, spark_session: SparkSession, data_path: Path, run_id
 ):
     dataset.write(df)
 
-    # Try a different path!
+    # Try a different path and partition_by
+    data = {"col1": ["A", "A", "A"], "col2": [7, 8, 9], "col3": ["A11", "A11", "A12"]}
+    df2 = pd.DataFrame(data)
     old_path = dataset._path
     dataset._path = str(data_path / "test_hive_write_existing_table")
-    with pytest.raises(AnalysisException) as exec_info:
-        dataset.write(df, partition_by="col1")
-    assert "It doesn't match the specified location" in str(exec_info.value)
+    dataset.write(df2)
     dataset._path = old_path
 
-    # Try a different partition!
-    with pytest.raises(AnalysisException) as exec_info:
-        dataset.write(df, partition_by="col1")
-    assert "Specified partitioning does not match that of the existing table" in str(exec_info.value)
+    read_df = dataset.to_spark_pandas(partitions=dict(run_id=run_id)).to_pandas()
+    assert read_df["col1"].sort_values().unique().tolist() == ["A", "B"]
+    assert read_df["col2"].sort_values().unique().tolist() == list(range(1, 10))
+    assert read_df["col3"].sort_values().unique().tolist() == ["A1", "A11", "A12", "A2", "B1", "B2"]
+    assert read_df["run_id"].unique().tolist() == [run_id]
+
+
+@pytest.mark.parametrize("hive_table", ["test_hive_write_existing_table"])
+@pytest.mark.parametrize("partition_by", [None])
+@pytest.mark.parametrize("columns", ["col1,col2,col3,test_run_id"])
+@pytest.mark.spark
+def test_hive_write_existing_table(
+    dataset: HiveDataset, df: pd.DataFrame, spark_session: SparkSession, data_path: Path, run_id
+):
+    df["test_run_id"] = run_id
+    dataset.write(df)
+
+    # Try a different path and partition_by
+    data = {"col1": ["A", "A", "A"], "col2": [7, 8, 9], "col3": ["A11", "A11", "A12"]}
+    df2 = pd.DataFrame(data)
+    df2["test_run_id"] = run_id
+    old_path = dataset._path
+    dataset._path = str(data_path / "test_hive_write_existing_table")
+    dataset.write(df2)
+    dataset._path = old_path
+
+    read_df = dataset.to_spark_pandas(partitions=dict(test_run_id=run_id)).to_pandas()
+    assert read_df["col1"].sort_values().unique().tolist() == ["A", "B"]
+    assert read_df["col2"].sort_values().unique().tolist() == list(range(1, 10))
+    assert read_df["col3"].sort_values().unique().tolist() == ["A1", "A11", "A12", "A2", "B1", "B2"]
+    assert read_df["test_run_id"].unique().tolist() == [run_id]
 
 
 @pytest.mark.parametrize("partition_by", ["col1,col3,run_id"])
-@pytest.mark.parametrize("hive_table", ["test_db.my_hive_table_run_id"])
+@pytest.mark.parametrize("hive_table", ["test_db.test_hive_to_spark_run_id"])
 @pytest.mark.parametrize("columns", ["col1,col2,col3,run_id"])
 @pytest.mark.spark
 def test_hive_to_spark_run_id(dataset: HiveDataset, df: pd.DataFrame, run_id: str, spark_session):
@@ -168,7 +196,7 @@ def test_read_on_write_only_spark(dataset: HiveDataset, df):
 @pytest.mark.parametrize("partition_by", ["col1,col3,run_id"])
 @pytest.mark.parametrize("hive_table", ["my_hive_table_spark_pandas"])
 @pytest.mark.spark
-def test_default_plugin_spark_pandas(dataset: HiveDataset, df: pd.DataFrame, run_id: str, spark_session):
+def test_hive_default_plugin_spark_pandas(dataset: HiveDataset, df: pd.DataFrame, run_id: str, spark_session):
     dataset.write(ps.from_pandas(df))
     read_psdf: ps.DataFrame = dataset.to_spark_pandas(partitions=dict(run_id=run_id))
     assert isinstance(read_psdf, ps.DataFrame)
