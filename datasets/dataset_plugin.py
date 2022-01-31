@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from abc import ABC
 from typing import Callable, Dict, Iterable, Optional, Union
 
@@ -9,6 +10,10 @@ from datasets.utils.case_utils import is_upper_pascal_case
 
 from .mode import Mode
 from .program_executor import ProgramExecutor
+
+
+_logger = logging.getLogger(__name__)
+_logger.setLevel(logging.DEBUG)
 
 
 class DatasetPlugin(ABC):
@@ -68,12 +73,12 @@ class DatasetPlugin(ABC):
         for plugin_context in (
             plugin_context for plugin_context in cls._plugins.keys() if context_lookup & plugin_context
         ):
-            for plugin_constructor_keys, plugin in cls._plugins[plugin_context].items():
-                if plugin_constructor_keys.issubset(dataset_args):
-                    if plugin_constructor_keys == {"name"}:
+            for plugin_keys, plugin in cls._plugins[plugin_context].items():
+                if len(plugin_keys.intersection(dataset_args)) > 0:
+                    if plugin_keys == {"name"}:
                         default_plugin = plugin
                     else:
-                        match_count = len(plugin_constructor_keys.intersection(dataset_args))
+                        match_count = len(plugin_keys.intersection(dataset_args))
                         if match_count > max_intersect_count:
                             max_intersect_count = match_count
                             ret_plugin = plugin

@@ -1,5 +1,6 @@
 from pathlib import Path
 
+import dask.dataframe as dd
 import pandas as pd
 import pytest
 from pandas._testing import assert_frame_equal
@@ -39,7 +40,7 @@ def dataset(hive_table: str, partition_by: str, mode: Mode, columns: str):
         name="Foo",
         hive_table=hive_table,
         context=Context.BATCH,
-        logical_key="my_key",
+        logical_key="col1",
         columns=columns,
         partition_by=partition_by,
         mode=mode,
@@ -59,8 +60,40 @@ def df() -> pd.DataFrame:
 def test_from_keys_offline_plugin(dataset: HiveDataset, hive_table: str):
     assert dataset.name == "Foo"
     assert dataset.hive_table == hive_table
-    assert dataset.key == "my_key"
+    assert dataset.key == "col1"
     assert dataset.partition_by == "col1,col3"
+
+
+def test_from_keys_is_hive_table(partition_by: str, mode: Mode, columns: str):
+    dataset = DatasetPlugin.from_keys(
+        name="FooFoo",
+        is_hive_table=True,
+        context=Context.BATCH,
+        logical_key="col1",
+        columns=columns,
+        partition_by=partition_by,
+        mode=mode,
+    )
+    assert dataset.name == "FooFoo"
+    assert dataset.hive_table == "foo_foo"
+    assert dataset.key == "col1"
+    assert dataset.partition_by == "col1,col3"
+
+
+def test_from_keys_hive_not_pascal(partition_by: str, mode: Mode, columns: str):
+    name = "foofoo"
+    with pytest.raises(ValueError) as exec_info:
+        DatasetPlugin.from_keys(
+            name=name,
+            is_hive_table=True,
+            context=Context.BATCH,
+            logical_key="col1",
+            columns=columns,
+            partition_by=partition_by,
+            mode=mode,
+        )
+
+    assert f"{name=} is not upper pascal case." in str(exec_info.value)
 
 
 @pytest.mark.parametrize("mode", [Mode.WRITE])
@@ -174,6 +207,14 @@ def test_hive_to_spark_run_id(dataset: HiveDataset, df: pd.DataFrame, run_id: st
     assert df1["col2"].tolist() == list(range(1, 3))
     assert df1["col3"].unique().tolist() == ["A1"]
     assert df1["run_id"].unique().tolist() == [run_id]
+
+
+def test_write_unsupported_data_frame(dataset: HiveDataset, df: pd.DataFrame):
+    data = dd.from_pandas(df, npartitions=1)
+    with pytest.raises(ValueError) as exec_info:
+        dataset.write(data)
+
+    assert "data is of unsupported type" in str(exec_info.value)
 
 
 @pytest.mark.spark

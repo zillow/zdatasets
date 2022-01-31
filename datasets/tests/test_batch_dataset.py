@@ -62,7 +62,7 @@ def df() -> pd.DataFrame:
 
 def test_from_keys_offline_plugin(dataset: BatchDataset, path: str):
     assert dataset.name == "Ds1"
-    assert dataset.hive_table_name == "ds_1"
+    assert dataset._hive_table_name == "ds_1"
     assert dataset.key == "my_key"
     assert dataset.path == path
     assert dataset.partition_by == "col1,run_id"

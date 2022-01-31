@@ -7,17 +7,16 @@ from datasets.plugins import HiveDataset
 
 # Can also invoke from CLI:
 #  > python datasets/tutorials/6_hive_dataset_flow.py.py run \
-#    --hive_dataset '{"name": "HelloDataset", hive_table="hive_dataset", \
+#    --zpids_dataset '{"name": "ZpidsDataset", hive_table="zpids_dataset", \
 #    "partition_by": "region", "mode": "READ_WRITE"}'
 
 
 class HiveDatasetFlow(FlowSpec):
-    hive_dataset: HiveDataset = Parameter(
-        "hive_dataset",
+    zpids_dataset: HiveDataset = Parameter(
+        "zpids_dataset",
         default=dict(
-            # partitioning by run_id must be explicit!
-            name="HelloDataset",
-            hive_table="hive_dataset",
+            name="ZpidsDataset",
+            is_hive_table=True,
             partition_by="region,run_id",
             mode=Mode.READ_WRITE,
         ),
@@ -30,11 +29,11 @@ class HiveDatasetFlow(FlowSpec):
         print("saving data_frame: \n", df.to_string(index=False))
 
         # Example of writing to a dataset
-        print(f"{self.hive_dataset.program_name=}")
-        self.hive_dataset.write(df)
+        print(f"{self.zpids_dataset.program_name=}")
+        self.zpids_dataset.write(df)
 
         # save this as an output dataset
-        self.output_dataset = self.hive_dataset
+        self.output_dataset = self.zpids_dataset
         read_df: pd.DataFrame = self.output_dataset.to_spark_pandas(partitions=dict(region="A")).to_pandas()
         print('self.output_dataset.to_pandas(partitions=dict(region="A")):')
         print(read_df.to_string(index=False))

@@ -42,7 +42,7 @@ class BatchBasePlugin(DatasetPlugin, dict):
         mode: Union[Mode, str] = Mode.READ,
         partition_by: Optional[ColumnNames] = None,
     ):
-        self.hive_table_name = hive_table_name
+        self._hive_table_name = hive_table_name
         self.partition_by = partition_by
         self.program_name = self._executor.current_program_name
         self._path: Optional[str] = None
@@ -58,7 +58,7 @@ class BatchBasePlugin(DatasetPlugin, dict):
             if value:
                 self[key] = value
 
-        dict.__init__(self, name=name, hive_table_name=hive_table_name, mode=self.mode.name)
+        dict.__init__(self, name=name, _hive_table_name=self._hive_table_name, mode=self.mode.name)
         set_name("logical_key", logical_key)
         set_name("columns", columns)
         set_name("run_id", run_id)
@@ -132,6 +132,6 @@ class BatchBasePlugin(DatasetPlugin, dict):
             self._executor.datastore_path,
             "datastore",
             (self.program_name if self.program_name else self._executor.current_program_name),
-            self.hive_table_name,
+            self._hive_table_name,
         )
         return path
