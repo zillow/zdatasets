@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "zdatasets"
-version = "0.0.6.dev4"
+version = "0.0.6.dev5"
 description = "Dataset SDK for consistent read/write [batch, online, streaming] data."
 classifiers = [
   "Development Status :: 2 - Pre-Alpha",
