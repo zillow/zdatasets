@@ -9,7 +9,11 @@ from datasets.context import Context
 from datasets.dataset_plugin import DatasetPlugin
 from datasets.exceptions import InvalidOperationException
 from datasets.plugins.batch.batch_base_plugin import BatchBasePlugin
-from datasets.utils.case_utils import snake_case_to_pascal
+from datasets.utils.case_utils import (
+    is_upper_pascal_case,
+    pascal_to_snake_case,
+    snake_case_to_pascal,
+)
 
 
 _logger = logging.getLogger(__name__)
@@ -20,35 +24,33 @@ if TYPE_CHECKING:
     from pyspark.sql import DataFrame as SparkDataFrame, SparkSession
 
 
-@DatasetPlugin.register(constructor_keys={"hive_table"}, context=Context.BATCH)
+@DatasetPlugin.register(constructor_keys={"is_hive_table", "hive_table"}, context=Context.BATCH)
 class HiveDataset(BatchBasePlugin):
     def __init__(
         self,
-        hive_table: str,
         name: Optional[str] = None,
+        is_hive_table: Optional[bool] = None,
+        hive_table: Optional[str] = None,
         logical_key: Optional[str] = None,
         columns: Optional[ColumnNames] = None,
         run_id: Optional[str] = None,
         mode: Mode = Mode.READ,
         partition_by: Optional[ColumnNames] = None,
     ):
-        if name:
-            ValueError(
-                "You cannot specify the logical name of a Dataset already created and named. "
-                "Maybe you are looking for 'field_name'?"
-            )
+        if is_hive_table and hive_table is None and not is_upper_pascal_case(name):
+            raise ValueError(f"{name=} is not upper pascal case.")
+
+        self.hive_table = hive_table if hive_table else pascal_to_snake_case(name)
 
         super(HiveDataset, self).__init__(
-            name=name if name else snake_case_to_pascal(hive_table),
-            hive_table_name=hive_table,
+            name=name if name else snake_case_to_pascal(self.hive_table),
+            hive_table_name=self.hive_table,
             logical_key=logical_key,
             columns=columns,
             run_id=run_id,
             mode=mode,
             partition_by=partition_by,
         )
-        self.hive_table = hive_table
-        self["hive_table"] = hive_table
 
     def to_spark_pandas(
         self,
@@ -172,7 +174,8 @@ class HiveDataset(BatchBasePlugin):
                 .insertInto(self.hive_table)
             )
         else:
-            _logger.info(f"{self.hive_table=} does not exist: creating!")
+            path = self._get_dataset_path()
+            _logger.info(f"{self.hive_table=} does not exist: creating {path=}!")
             (
                 df.write.mode("append")
                 .option("path", self._get_dataset_path())
