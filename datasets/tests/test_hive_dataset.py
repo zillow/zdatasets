@@ -120,10 +120,10 @@ def test_hive_to_spark(dataset: HiveDataset, df: pd.DataFrame, spark_session: Sp
     dataset.write(pd.DataFrame(data))
     read_spdf = dataset.to_spark_pandas()
 
-    assert read_spdf.columns.to_list() == ["col1", "col2", "col3"]
+    assert read_spdf.columns.to_list() == ["col1", "col2", "col3", "run_id"]
 
     spark_df = dataset.to_spark(columns="col1")
-    assert spark_df.columns == ["col1"]
+    assert spark_df.columns == ["col1", "run_id"]
 
     df1 = dataset.to_spark(partitions=dict(col1="A", col3="A1")).toPandas()
     assert df1["col1"].unique().tolist() == ["A"]

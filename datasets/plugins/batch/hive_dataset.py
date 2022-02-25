@@ -155,6 +155,13 @@ class HiveDataset(BatchBasePlugin):
             else:
                 partition_by = None
             print(f"{partition_by=}")
+        else:
+            # add run_id column by default
+            if partition_by is None:
+                partition_by = ["run_id"]
+            elif "run_id" not in partition_by:
+                partition_cols: List[str] = self._partition_by_to_list(partition_by)
+                partition_by = partition_cols + ["run_id"]
 
         df, partition_cols = self._write_data_frame_prep(df, partition_by=partition_by)
         _logger.info(f"write_spark({self.hive_table=}, {partition_cols=})")
