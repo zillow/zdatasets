@@ -154,7 +154,6 @@ class HiveDataset(BatchBasePlugin):
 
             desc_df: SparkDataFrame = spark.sql(f"desc {self.hive_table}")
             partition_list: List[Row] = desc_df.select(desc_df.col_name).collect()
-            print(f"{partition_list=}")
 
             partition_index: Optional[int] = None
             for index, item in enumerate(partition_list):
@@ -165,13 +164,12 @@ class HiveDataset(BatchBasePlugin):
                 partition_by = [row[0] for row in partition_list[partition_index:]]
             else:
                 partition_by = None
-            print(f"{partition_by=}")
         else:
             # add run_id column by default
-            if partition_by is None:
+            partition_cols: List[str] = self._partition_by_to_list(partition_by)
+            if partition_cols is None:
                 partition_by = ["run_id"]
-            elif "run_id" not in partition_by:
-                partition_cols: List[str] = self._partition_by_to_list(partition_by)
+            elif "run_id" not in partition_cols:
                 partition_by = partition_cols + ["run_id"]
 
         df, partition_cols = self._write_data_frame_prep(df, partition_by=partition_by)

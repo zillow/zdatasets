@@ -111,6 +111,14 @@ def test_hive_to_spark(dataset: HiveDataset, df: pd.DataFrame, spark_session: Sp
     # Create the Hive Table
     dataset.write(df)
 
+    partition_col = (
+        spark_session.sql(f"""show partitions {dataset.hive_table}""")
+        .rdd.map(lambda x: x[0])
+        .map(lambda x: [l.split("=")[0] for l in x.split("/")])  # noqa: E741
+        .first()
+    )
+    assert partition_col == ["col1", "col3", "run_id"]
+
     # add a new partition
     data = {"col1": ["C"], "col2": [7], "col3": ["C1"]}
     dataset.write(pd.DataFrame(data))
