@@ -127,6 +127,15 @@ class HiveDataset(BatchBasePlugin):
             conf = SparkConf()
         return SparkSession.builder.config(conf=conf).enableHiveSupport().getOrCreate()
 
+    @staticmethod
+    def _validate_columns(df: "SparkDataFrame"):
+        # column names are alphanumeric and underscore
+        #  HIVE-10120 Disallow create table with dot/colon in column name
+        #  https://stackoverflow.com/a/55337025
+        for column_name in df.columns:
+            if not all(c.isalnum() or c == "_" for c in column_name):
+                raise ValueError(f"{column_name} is not alphanum or underscore!")
+
     def write_spark(
         self,
         df: "SparkDataFrame",
@@ -134,6 +143,8 @@ class HiveDataset(BatchBasePlugin):
         conf: Optional["SparkConf"] = None,
         **kwargs,
     ):
+        HiveDataset._validate_columns(df)
+
         spark: SparkSession = HiveDataset._get_or_create_spark_session(conf)
         table_exists: bool = spark.sql(f"SHOW TABLES LIKE '{self.hive_table}'").count() == 1
         if table_exists:
