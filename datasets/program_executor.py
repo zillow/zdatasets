@@ -30,3 +30,12 @@ class ProgramExecutor(ABC):
         The current default data context for this execution environment.
         """
         pass
+
+    @property
+    @abstractmethod
+    def run_time(self) -> int:
+        """
+        UTC Epoch time when the program started, used as the run_time column in Batch & Hive
+        datasets.
+        """
+        pass

@@ -10,10 +10,8 @@ from typing import (
     Union,
 )
 
-import pandas as pd
-
 from datasets import Mode
-from datasets._typing import ColumnNames
+from datasets._typing import ColumnNames, DataFrameType
 from datasets.dataset_plugin import DatasetPlugin
 from datasets.exceptions import InvalidOperationException
 
@@ -21,8 +19,8 @@ from datasets.exceptions import InvalidOperationException
 _logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
-    import dask.dataframe as dd
-    from pyspark.sql import DataFrame as SparkDataFrame
+    from pyspark import SparkConf
+    from pyspark.sql import SparkSession
 
 
 class BatchBasePlugin(DatasetPlugin, dict):
@@ -39,6 +37,7 @@ class BatchBasePlugin(DatasetPlugin, dict):
         logical_key: str = None,
         columns: Optional[ColumnNames] = None,
         run_id: Optional[str] = None,
+        run_time: Optional[int] = None,
         mode: Union[Mode, str] = Mode.READ,
         partition_by: Optional[ColumnNames] = None,
     ):
@@ -51,6 +50,7 @@ class BatchBasePlugin(DatasetPlugin, dict):
             logical_key=logical_key,
             columns=columns,
             run_id=run_id,
+            run_time=run_time,
             mode=mode,
         )
 
@@ -62,12 +62,14 @@ class BatchBasePlugin(DatasetPlugin, dict):
         set_name("logical_key", logical_key)
         set_name("columns", columns)
         set_name("run_id", run_id)
+        set_name("run_time", run_time)
         set_name("partition_by", partition_by)
 
     def _get_filters_columns(
         self,
         columns: Optional[ColumnNames] = None,
         run_id: Optional[str] = None,
+        run_time: Optional[int] = None,
         partitions: Optional[dict] = None,
     ) -> Tuple[Optional[list], Optional[Iterable[str]]]:
         read_columns = self._get_read_columns(columns)
@@ -75,6 +77,10 @@ class BatchBasePlugin(DatasetPlugin, dict):
         query_run_id = run_id if run_id else self.run_id
         if query_run_id:
             filters = [("run_id", "=", query_run_id)]
+
+        query_run_time = run_time if run_time else self.run_time
+        if query_run_time:
+            filters.append(("run_time", "=", query_run_time))
 
         if partitions:
             if filters is None:
@@ -98,24 +104,42 @@ class BatchBasePlugin(DatasetPlugin, dict):
 
     def _write_data_frame_prep(
         self,
-        df: Union[pd.DataFrame, "dd.DataFrame", "SparkDataFrame"],
+        df: DataFrameType,
         partition_by: Optional[ColumnNames] = None,
-    ) -> Tuple[Union[pd.DataFrame, "dd.DataFrame", "SparkDataFrame"], List[str]]:
+    ) -> Tuple[DataFrameType, List[str]]:
         if not (self.mode & Mode.WRITE):
             raise InvalidOperationException(f"Cannot write because mode={self.mode}")
 
         partition_cols: List[str] = self._partition_by_to_list(partition_by)
 
-        if "run_id" in partition_cols:
-            self.run_id = self._executor.current_run_id  # DO NOT ALLOW OVERWRITE OF ANOTHER RUN ID
-            # TODO: should I add run_time for latest run query scenario?
+        def add_column(df: DataFrameType, name: str, value: Union[str, int]) -> DataFrameType:
             if "pyspark.sql.dataframe.DataFrame" in str(type(df)):
                 from pyspark.sql.functions import lit
 
-                df = df.withColumn("run_id", lit(self.run_id))
+                df = df.withColumn(name, lit(value))
             else:
-                df["run_id"] = self.run_id
+                df[name] = value
+
+            return df
+
+        if "run_id" in partition_cols:
+            self.run_id = self._executor.current_run_id  # DO NOT ALLOW OVERWRITE OF ANOTHER RUN ID
+            df = add_column(df, "run_id", self.run_id)
+
+        if "run_time" in partition_cols:
+            self.run_time = int(self._executor.run_time)
+            df = add_column(df, "run_time", self.run_time)
+
         return df, partition_cols
+
+    @staticmethod
+    def _get_spark_builder(conf: "Optional[SparkConf]" = None) -> "SparkSession.Builder":
+        from pyspark import SparkConf
+        from pyspark.sql import SparkSession
+
+        if conf is None:
+            conf = SparkConf()
+        return SparkSession.builder.config(conf=conf)
 
     @classmethod
     def register_dataset_path_func(cls, func: Optional[Callable]):

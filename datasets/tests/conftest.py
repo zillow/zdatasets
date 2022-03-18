@@ -1,5 +1,6 @@
 import logging
 import os
+import time
 import uuid
 from pathlib import Path
 
@@ -13,6 +14,7 @@ from datasets.program_executor import ProgramExecutor
 
 test_dir = Path(os.path.realpath(__file__)).parent
 _run_id = str(uuid.uuid1())
+_run_time = time.time()
 
 
 @pytest.fixture
@@ -43,6 +45,10 @@ class TestExecutor(ProgramExecutor):
     @property
     def context(self) -> Context:
         return TestExecutor.current_context
+
+    @property
+    def run_time(self) -> int:
+        return _run_time
 
 
 DatasetPlugin.register_executor(executor=TestExecutor())
