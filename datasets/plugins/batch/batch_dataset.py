@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, List, Optional, Tuple, Union
 import pandas as pd
 
 from datasets import Mode
-from datasets._typing import ColumnNames
+from datasets._typing import ColumnNames, DataFrameType
 from datasets.context import Context
 from datasets.dataset_plugin import DatasetPlugin, dataset_name_validator
 from datasets.exceptions import InvalidOperationException
@@ -34,6 +34,7 @@ class BatchDataset(BatchBasePlugin):
         logical_key: str = None,
         columns: Optional[ColumnNames] = None,
         run_id: Optional[str] = None,
+        run_time: Optional[int] = None,
         mode: Mode = Mode.READ,
         partition_by: Optional[ColumnNames] = None,
         path: Optional[Union[str, Path]] = None,
@@ -45,6 +46,7 @@ class BatchDataset(BatchBasePlugin):
             logical_key=logical_key,
             columns=columns,
             run_id=run_id,
+            run_time=run_time,
             mode=mode,
             partition_by=partition_by,
         )
@@ -57,18 +59,20 @@ class BatchDataset(BatchBasePlugin):
         self,
         columns: Optional[str] = None,
         run_id: Optional[str] = None,
+        run_time: Optional[int] = None,
         conf: Optional["SparkConf"] = None,
         partitions: Optional[dict] = None,
         **kwargs,
     ) -> "ps.DataFrame":
         return self.to_spark(
-            columns=columns, run_id=run_id, conf=conf, partitions=partitions, **kwargs
+            columns=columns, run_id=run_id, run_time=run_time, conf=conf, partitions=partitions, **kwargs
         ).to_pandas_on_spark(index_col=kwargs.get("index_col", None))
 
     def to_pandas(
         self,
         columns: Optional[str] = None,
         run_id: Optional[str] = None,
+        run_time: Optional[int] = None,
         storage_format: str = "parquet",
         partitions: Optional[dict] = None,
         **kwargs,
@@ -76,9 +80,11 @@ class BatchDataset(BatchBasePlugin):
         if not (self.mode & Mode.READ):
             raise InvalidOperationException(f"Cannot read because mode={self.mode}")
 
-        filters, read_columns = self._get_filters_columns(columns, run_id, partitions)
+        filters, read_columns = self._get_filters_columns(columns, run_id, run_time, partitions)
         self._path = self._get_dataset_path()
-        _logger.info(f"to_pandas({self.path=}, {read_columns=}, {partitions=}, {run_id=}, {filters=})")
+        _logger.info(
+            f"to_pandas({self.path=},{read_columns=},{partitions=},{run_id=},{run_time=},{filters=})"
+        )
 
         df: pd.DataFrame
         if storage_format == "parquet":
@@ -103,6 +109,7 @@ class BatchDataset(BatchBasePlugin):
         self,
         columns: Optional[str] = None,
         run_id: Optional[str] = None,
+        run_time: Optional[int] = None,
         partitions: Optional[dict] = None,
         **kwargs,
     ) -> "dd.DataFrame":
@@ -111,9 +118,9 @@ class BatchDataset(BatchBasePlugin):
 
         import dask.dataframe as dd
 
-        filters, read_columns = self._get_filters_columns(columns, run_id, partitions)
+        filters, read_columns = self._get_filters_columns(columns, run_id, run_time, partitions)
         self._path = self._get_dataset_path()
-        _logger.info(f"to_dask({self._path=}, {read_columns=}, {partitions=}, {run_id=}, {filters=})")
+        _logger.info(f"to_dask({self._path=},{read_columns=},{partitions=},{run_id=},{run_time=},{filters=})")
         return dd.read_parquet(
             self._path,
             columns=read_columns,
@@ -126,6 +133,7 @@ class BatchDataset(BatchBasePlugin):
         self,
         columns: Optional[str] = None,
         run_id: Optional[str] = None,
+        run_time: Optional[int] = None,
         conf: Optional["SparkConf"] = None,
         storage_format: str = "parquet",
         partitions: Optional[dict] = None,
@@ -134,19 +142,19 @@ class BatchDataset(BatchBasePlugin):
         if not self.mode & Mode.READ:
             raise InvalidOperationException(f"Cannot read because mode={self.mode}")
 
-        from pyspark import SparkConf
         from pyspark.sql import DataFrame, SparkSession
 
-        filters, read_columns = self._get_filters_columns(columns, run_id, partitions)
+        filters, read_columns = self._get_filters_columns(columns, run_id, run_time, partitions)
         self._path = self._get_dataset_path()
 
         read_columns = read_columns if read_columns else ["*"]
         if (self.run_id or run_id) and "*" not in read_columns and "run_id" not in read_columns:
             read_columns.append("run_id")
 
-        if conf is None:
-            conf = SparkConf()
-        spark_session: SparkSession = SparkSession.builder.config(conf=conf).getOrCreate()
+        if (self.run_time or run_time) and "*" not in read_columns and "run_time" not in read_columns:
+            read_columns.append("run_time")
+
+        spark_session: SparkSession = BatchBasePlugin._get_spark_builder(conf).getOrCreate()
 
         _logger.info(f"to_spark({self._path=}, {read_columns=}, {partitions=}, {run_id=}, {filters=})")
         df: DataFrame = spark_session.read.load(self._path, format=storage_format, **kwargs).select(
@@ -178,12 +186,15 @@ class BatchDataset(BatchBasePlugin):
 
     def _path_write_data_frame_prep(
         self,
-        df: Union[pd.DataFrame, "dd.DataFrame", "SparkDataFrame"],
+        df: DataFrameType,
         partition_by: Optional[ColumnNames] = None,
-    ) -> Tuple[Union[pd.DataFrame, "dd.DataFrame", "SparkDataFrame"], List[str]]:
+    ) -> Tuple[DataFrameType, List[str]]:
         partition_cols: List[str] = self._partition_by_to_list(partition_by)
         if self.path is None:
             # partition on run_id if @dataset(path="s3://..") is not given
+            if "run_id" not in partition_cols:
+                partition_cols.append("run_id")
+
             if "run_id" not in partition_cols:
                 partition_cols.append("run_id")
 

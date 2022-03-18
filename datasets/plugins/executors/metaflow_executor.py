@@ -1,3 +1,5 @@
+from dateutil import parser
+
 from datasets.context import Context
 from datasets.dataset_plugin import ProgramExecutor
 
@@ -26,3 +28,11 @@ class MetaflowExecutor(ProgramExecutor):
     @property
     def context(self) -> Context:
         return Context.BATCH
+
+    @property
+    def run_time(self) -> int:
+        from metaflow import Run, current
+
+        run = Run(f"{current.flow_name}/{current.run_id}")
+        epoch = int(parser.parse(run.created_at).timestamp())
+        return epoch

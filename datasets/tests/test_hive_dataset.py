@@ -117,7 +117,7 @@ def test_hive_to_spark(dataset: HiveDataset, df: pd.DataFrame, spark_session: Sp
         .map(lambda x: [l.split("=")[0] for l in x.split("/")])  # noqa: E741
         .first()
     )
-    assert partition_col == ["col1", "col3", "run_id"]
+    assert partition_col == ["col1", "col3", "run_id", "run_time"]
 
     # add a new partition
     data = {"col1": ["C"], "col2": [7], "col3": ["C1"]}
@@ -128,10 +128,10 @@ def test_hive_to_spark(dataset: HiveDataset, df: pd.DataFrame, spark_session: Sp
     dataset.write(pd.DataFrame(data))
     read_spdf = dataset.to_spark_pandas()
 
-    assert read_spdf.columns.to_list() == ["col1", "col2", "col3", "run_id"]
+    assert read_spdf.columns.to_list() == ["col1", "col2", "col3", "run_id", "run_time"]
 
     spark_df = dataset.to_spark(columns="col1")
-    assert spark_df.columns == ["col1", "run_id"]
+    assert spark_df.columns == ["col1", "run_id", "run_time"]
 
     df1 = dataset.to_spark(partitions=dict(col1="A", col3="A1")).toPandas()
     assert df1["col1"].unique().tolist() == ["A"]
@@ -208,7 +208,7 @@ def test_hive_to_spark_run_id(dataset: HiveDataset, df: pd.DataFrame, run_id: st
 
     spark_df = dataset.to_spark(columns="col1,run_id")
     spark_df.show()
-    assert spark_df.columns == ["col1", "run_id"]
+    assert spark_df.columns == ["col1", "run_id", "run_time"]
 
     df1: pd.DataFrame = dataset.to_spark(partitions=dict(col1="A", col3="A1")).toPandas()
     assert df1["col1"].unique().tolist() == ["A"]
@@ -251,6 +251,7 @@ def test_hive_default_plugin_spark_pandas(dataset: HiveDataset, df: pd.DataFrame
     assert isinstance(read_psdf, ps.DataFrame)
     read_df = read_psdf.to_pandas()
     del read_df["run_id"]
+    del read_df["run_time"]
     assert_frame_equal(df.set_index("col2"), read_df.set_index("col2"), check_like=True)
 
 

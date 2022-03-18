@@ -25,7 +25,7 @@ class DatasetPlugin(ABC):
     _executor: ProgramExecutor
     # Context -> constructor_keys -> dataset plugin
     _plugins: Dict[Context, Dict[set[str], DatasetPlugin]] = {}
-    _META_COLUMNS = ["run_id"]
+    _META_COLUMNS = ["run_id", "run_time"]
 
     def __init__(
         self,
@@ -33,6 +33,7 @@ class DatasetPlugin(ABC):
         logical_key: Optional[str] = None,
         columns: Optional[ColumnNames] = None,
         run_id: Optional[str] = None,
+        run_time: Optional[int] = None,
         mode: Union[Mode, str] = Mode.READ,
     ):
         """
@@ -43,6 +44,7 @@ class DatasetPlugin(ABC):
             used when creating Hive/Dynamo tables or registering with a Catalog.
         :param columns: Fetch columns
         :param run_id: The program run_id partition to select from.
+        :param run_time: The program run_time in UTC epochs
         :param mode: The data access read/write mode
         """
         dataset_name_validator(name)
@@ -51,6 +53,7 @@ class DatasetPlugin(ABC):
         self.mode: Mode = mode if isinstance(mode, Mode) else Mode[mode]
         self.columns = columns
         self.run_id = run_id
+        self.run_time = run_time
 
     @classmethod
     def from_keys(cls, context: Optional[Union[Context, str]] = None, **kwargs) -> DatasetPlugin:

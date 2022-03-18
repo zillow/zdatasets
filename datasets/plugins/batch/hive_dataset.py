@@ -34,6 +34,7 @@ class HiveDataset(BatchBasePlugin):
         logical_key: Optional[str] = None,
         columns: Optional[ColumnNames] = None,
         run_id: Optional[str] = None,
+        run_time: Optional[int] = None,
         mode: Mode = Mode.READ,
         partition_by: Optional[ColumnNames] = None,
     ):
@@ -48,6 +49,7 @@ class HiveDataset(BatchBasePlugin):
             logical_key=logical_key,
             columns=columns,
             run_id=run_id,
+            run_time=run_time,
             mode=mode,
             partition_by=partition_by,
         )
@@ -56,18 +58,20 @@ class HiveDataset(BatchBasePlugin):
         self,
         columns: Optional[str] = None,
         run_id: Optional[str] = None,
+        run_time: Optional[int] = None,
         conf: Optional["SparkConf"] = None,
         partitions: Optional[dict] = None,
         **kwargs,
     ) -> "ps.DataFrame":
         return self.to_spark(
-            columns=columns, run_id=run_id, conf=conf, partitions=partitions, **kwargs
+            columns=columns, run_id=run_id, run_time=run_time, conf=conf, partitions=partitions, **kwargs
         ).to_pandas_on_spark(index_col=kwargs.get("index_col", None))
 
     def to_spark(
         self,
         columns: Optional[str] = None,
         run_id: Optional[str] = None,
+        run_time: Optional[int] = None,
         conf: Optional["SparkConf"] = None,
         partitions: Optional[dict] = None,
         **kwargs,
@@ -77,16 +81,21 @@ class HiveDataset(BatchBasePlugin):
 
         from pyspark.sql import DataFrame, SparkSession
 
-        filters, read_columns = self._get_filters_columns(columns, run_id, partitions)
+        filters, read_columns = self._get_filters_columns(columns, run_id, run_time, partitions)
 
         read_columns = read_columns if read_columns else ["*"]
         if (self.run_id or run_id) and "*" not in read_columns and "run_id" not in read_columns:
             read_columns.append("run_id")
 
-        spark_session: SparkSession = HiveDataset._get_or_create_spark_session(conf)
+        if (self.run_time or run_time) and "*" not in read_columns and "run_time" not in read_columns:
+            read_columns.append("run_time")
 
-        _logger.info(f"to_spark({self.hive_table=}, {read_columns=}, {partitions=}, {run_id=}, {filters=})")
-        df: DataFrame = spark_session.read.options(**kwargs).table(self.hive_table).select(*read_columns)
+        spark: SparkSession = BatchBasePlugin._get_spark_builder(conf).enableHiveSupport().getOrCreate()
+
+        _logger.info(
+            f"to_spark({self.hive_table=},{read_columns=},{partitions=},{run_id=},{run_time=},{filters=})"
+        )
+        df: DataFrame = spark.read.options(**kwargs).table(self.hive_table).select(*read_columns)
 
         if filters:
             for name, _, val in filters:
@@ -119,15 +128,6 @@ class HiveDataset(BatchBasePlugin):
         )
 
     @staticmethod
-    def _get_or_create_spark_session(conf: "Optional[SparkConf]" = None) -> "SparkSession":
-        from pyspark import SparkConf
-        from pyspark.sql import SparkSession
-
-        if conf is None:
-            conf = SparkConf()
-        return SparkSession.builder.config(conf=conf).enableHiveSupport().getOrCreate()
-
-    @staticmethod
     def _validate_columns(df: "SparkDataFrame"):
         # column names are alphanumeric and underscore
         #  HIVE-10120 Disallow create table with dot/colon in column name
@@ -145,11 +145,12 @@ class HiveDataset(BatchBasePlugin):
     ):
         HiveDataset._validate_columns(df)
 
-        spark: SparkSession = HiveDataset._get_or_create_spark_session(conf)
+        spark: SparkSession = BatchBasePlugin._get_spark_builder(conf).enableHiveSupport().getOrCreate()
         table_exists: bool = spark.sql(f"SHOW TABLES LIKE '{self.hive_table}'").count() == 1
+        tmp_partition_by: Optional[ColumnNames] = None
         if table_exists:
             # Query for partition information,
-            # for self._write_data_frame_prep() to add run_id if needed
+            # for self._write_data_frame_prep() to add run_id,run_time if needed
             from pyspark import Row
 
             desc_df: SparkDataFrame = spark.sql(f"desc {self.hive_table}")
@@ -161,18 +162,20 @@ class HiveDataset(BatchBasePlugin):
                     partition_index = index + 2
                     break
             if partition_index:
-                partition_by = [row[0] for row in partition_list[partition_index:]]
+                tmp_partition_by = [row[0] for row in partition_list[partition_index:]]
             else:
-                partition_by = None
+                tmp_partition_by = None
         else:
             # add run_id column by default
-            partition_cols: List[str] = self._partition_by_to_list(partition_by)
-            if partition_cols is None:
-                partition_by = ["run_id"]
-            elif "run_id" not in partition_cols:
-                partition_by = partition_cols + ["run_id"]
+            tmp_partition_by = self._partition_by_to_list(partition_by)
+            if "run_id" not in tmp_partition_by:
+                tmp_partition_by += ["run_id"]
 
-        df, partition_cols = self._write_data_frame_prep(df, partition_by=partition_by)
+            # add run_time column by default
+            if "run_time" not in tmp_partition_by:
+                tmp_partition_by += ["run_time"]
+
+        df, partition_cols = self._write_data_frame_prep(df, partition_by=tmp_partition_by)
         _logger.info(f"write_spark({self.hive_table=}, {partition_cols=})")
 
         # About <.mode("append")>:
@@ -203,5 +206,5 @@ class HiveDataset(BatchBasePlugin):
     def __repr__(self):
         return (
             f"HiveDataset({self.hive_table=},{self.name=},{self.key=},{self.partition_by=},"
-            f"{self.run_id=},{self.columns=},{self.mode=}"
+            f"{self.run_id=},{self.run_time=},{self.columns=},{self.mode=}"
         )
