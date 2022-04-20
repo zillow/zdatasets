@@ -195,8 +195,8 @@ class BatchDataset(BatchBasePlugin):
             if "run_id" not in partition_cols:
                 partition_cols.append("run_id")
 
-            if "run_id" not in partition_cols:
-                partition_cols.append("run_id")
+            if "run_time" not in partition_cols:
+                partition_cols.append("run_time")
 
         return self._write_data_frame_prep(df, partition_cols)
 

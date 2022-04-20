@@ -13,6 +13,7 @@ from datasets.context import Context
 from datasets.dataset_plugin import DatasetPlugin
 from datasets.exceptions import InvalidOperationException
 from datasets.plugins.batch.batch_dataset import BatchDataset
+from datasets.tests.conftest import TestExecutor
 
 
 csv_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "data/pandas.csv")
@@ -77,8 +78,38 @@ def test_from_read_on_mode_write(dataset: BatchDataset, df: pd.DataFrame):
 
 
 @pytest.mark.parametrize("path", [None])
-@pytest.mark.parametrize("partition_by", ["col1,col3"])
 def test_to_pandas(dataset: BatchDataset, df: pd.DataFrame):
+    dataset.write(df.copy())
+    read_df = dataset.to_pandas(columns="col1,col2,col3")
+    assert (df == read_df).all().all()
+
+    df = dataset.to_pandas(columns="col1")
+    assert df.columns.to_list() == ["col1"]
+
+    df1 = dataset.to_pandas(partitions=dict(col1="A", col3="A1"))
+    assert df1["col1"].unique().tolist() == ["A"]
+    assert df1["col3"].unique().tolist() == ["A1"]
+
+    df2 = dataset.to_pandas(partitions=dict(col1="A"))
+    assert df2["col1"].unique().tolist() == ["A"]
+    assert df2["col3"].unique().tolist() == ["A1", "A2"]
+
+    # write with a new run_time
+    old_run_time = TestExecutor.test_run_time
+    TestExecutor.test_run_time += 2
+    dataset.write(read_df.copy())
+
+    # read old_run_time
+    df3 = dataset.to_pandas(
+        columns="col1,col2,col3,run_time", partitions=dict(col1="A"), run_time=old_run_time
+    )
+    assert df3["run_time"].unique().tolist() == [old_run_time]
+
+
+@pytest.mark.parametrize("path", [None])
+@pytest.mark.parametrize("partition_by", ["col1,col3"])
+@pytest.mark.parametrize("name", ["DsPartitioned"])
+def test_to_pandas_partitioned(dataset: BatchDataset, df: pd.DataFrame):
     dataset.write(df.copy())
     read_df = dataset.to_pandas(columns="col1,col2,col3")
     assert (df == read_df).all().all()
@@ -167,6 +198,7 @@ def test_read_on_write_only_dask(dataset: BatchDataset, df):
 
 @pytest.mark.parametrize("path", [None])
 @pytest.mark.parametrize("partition_by", ["col1,col3"])
+@pytest.mark.parametrize("name", ["DsSpark"])
 @pytest.mark.spark
 def test_to_spark(dataset: BatchDataset, df: pd.DataFrame, spark_session):
     sdf: SparkDataFrame = ps.from_pandas(df).to_spark()
@@ -174,7 +206,7 @@ def test_to_spark(dataset: BatchDataset, df: pd.DataFrame, spark_session):
     dataset.write(sdf)
     spark_df = dataset.to_spark(columns="col1")
     spark_df.show()
-    assert spark_df.columns == ["col1", "run_id"]  # run_id is added
+    assert spark_df.columns == ["col1", "run_id", "run_time"]  # run_id is added
 
     df1 = dataset.to_spark(partitions=dict(col1="A", col3="A1")).toPandas()
     assert df1["col1"].unique().tolist() == ["A"]

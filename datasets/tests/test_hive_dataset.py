@@ -12,6 +12,7 @@ from datasets.context import Context
 from datasets.dataset_plugin import DatasetPlugin
 from datasets.exceptions import InvalidOperationException
 from datasets.plugins import HiveDataset
+from datasets.tests.conftest import TestExecutor
 
 
 @pytest.fixture
@@ -145,6 +146,22 @@ def test_hive_to_spark(dataset: HiveDataset, df: pd.DataFrame, spark_session: Sp
     assert df3["col1"].unique().tolist() == ["C"]
     assert sorted(df3["col2"].unique().tolist()) == [7, 8]
     assert df3["col3"].unique().tolist() == ["C1"]
+
+    # write with a new run_time
+    old_run_time = TestExecutor.test_run_time
+    TestExecutor.test_run_time += 2
+    print(f"{TestExecutor.test_run_time=}, {old_run_time=}")
+    data = {"col1": ["D"], "col2": [42], "col3": ["D1"]}
+    dataset.write(pd.DataFrame(data))
+
+    def validate_latest(latest_df):
+        assert latest_df["col1"].unique().tolist() == ["D"]
+        assert latest_df["col2"].unique().tolist() == [42]
+        assert latest_df["col3"].unique().tolist() == ["D1"]
+        assert latest_df["run_time"].unique().tolist() == [TestExecutor.test_run_time]
+
+    validate_latest(dataset.to_spark_pandas(columns="col1,col2,col3,run_time").to_pandas())
+    validate_latest(spark_session.sql(f"SELECT * FROM {dataset.hive_table}_latest").toPandas())
 
 
 @pytest.mark.parametrize("hive_table", ["test_hive_write_existing_table_run_id"])

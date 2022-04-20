@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from dateutil import parser
 
 from datasets.context import Context
@@ -9,15 +11,15 @@ class MetaflowExecutor(ProgramExecutor):
     def current_run_id(self) -> str:
         from metaflow import current
 
-        return current.run_id
+        return str(current.run_id)
 
     @property
     def datastore_path(self) -> str:
         from metaflow import current
-        from metaflow.datastore import MetaflowDataStore
+        from metaflow.datastore import TaskDataStore
 
-        datastore: MetaflowDataStore = current.flow._datastore
-        return datastore.get_datastore_root_from_config(print)
+        datastore: TaskDataStore = current.flow._datastore
+        return datastore.parent_datastore._storage_impl.get_datastore_root_from_config(print)
 
     @property
     def current_program_name(self) -> str:
@@ -34,5 +36,9 @@ class MetaflowExecutor(ProgramExecutor):
         from metaflow import Run, current
 
         run = Run(f"{current.flow_name}/{current.run_id}")
-        epoch = int(parser.parse(run.created_at).timestamp())
+        if isinstance(run.created_at, datetime):
+            epoch = int(run.created_at.timestamp())
+        else:
+            epoch = int(parser.parse(run.created_at).timestamp())
+
         return epoch

@@ -203,6 +203,15 @@ class HiveDataset(BatchBasePlugin):
                 .saveAsTable(self.hive_table)
             )
 
+            create_view_query = f"""
+            CREATE OR REPLACE VIEW {self.hive_table}_latest AS
+            SELECT * FROM (
+                SELECT s.*, RANK() OVER(ORDER BY run_time DESC) rank FROM {self.hive_table} s
+            ) s
+            WHERE rank=1
+            """
+            spark.sql(create_view_query)
+
     def __repr__(self):
         return (
             f"HiveDataset({self.hive_table=},{self.name=},{self.key=},{self.partition_by=},"
