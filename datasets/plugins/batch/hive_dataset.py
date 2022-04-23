@@ -1,5 +1,8 @@
 import logging
-from typing import TYPE_CHECKING, List, Optional, Union
+import random
+import time
+from functools import partial
+from typing import TYPE_CHECKING, Callable, List, Optional, Union
 
 import pandas as pd
 
@@ -176,8 +179,15 @@ class HiveDataset(BatchBasePlugin):
                 tmp_partition_by += ["run_time"]
 
         df, partition_cols = self._write_data_frame_prep(df, partition_by=tmp_partition_by)
-        _logger.info(f"write_spark({self.hive_table=}, {partition_cols=})")
 
+        _logger.info(f"write_spark({self.hive_table=}, {partition_cols=})")
+        # TODO(talebz): This retry is especially for the race condition when another parallel SparkJob
+        #   FileOutputCommitter removes the _temporary and this one gets /_temporary/0 not found.
+        _retry_with_backoff(partial(self._write_spark_helper, spark, df, partition_cols, **kwargs))
+
+    def _write_spark_helper(
+        self, spark: "SparkSession", df: "SparkDataFrame", partition_cols: List[str], **kwargs
+    ):
         # About <.mode("append")>:
         #  - SaveMode.Append	"append":
         #      When saving a DataFrame to a data source, if data/table already exists,
@@ -186,6 +196,7 @@ class HiveDataset(BatchBasePlugin):
         #      Overwrite mode means that when saving a DataFrame to a data source,
         #      if data/table already exists, existing data is expected to be overwritten
         #      by the contents of the DataFrame.
+        table_exists: bool = spark.sql(f"SHOW TABLES LIKE '{self.hive_table}'").count() == 1
         if table_exists:
             (
                 df.select(spark.table(self.hive_table).columns)
@@ -203,8 +214,34 @@ class HiveDataset(BatchBasePlugin):
                 .saveAsTable(self.hive_table)
             )
 
+            create_view_query = f"""
+            CREATE OR REPLACE VIEW {self.hive_table}_latest AS
+            SELECT * FROM (
+                SELECT s.*, RANK() OVER(ORDER BY run_time DESC) rank FROM {self.hive_table} s
+            ) s
+            WHERE rank=1
+            """
+            spark.sql(create_view_query)
+
     def __repr__(self):
         return (
             f"HiveDataset({self.hive_table=},{self.name=},{self.key=},{self.partition_by=},"
             f"{self.run_id=},{self.run_time=},{self.columns=},{self.mode=}"
         )
+
+
+def _retry_with_backoff(func: Callable, retries=5, backoff_in_seconds=1):
+    i = 0
+    while True:
+        try:
+            return func()
+        except Exception as e:
+            if i >= retries:
+                print(f"Failed after {retries} retries:")
+                raise
+            else:
+                i += 1
+                sleep = backoff_in_seconds * 2 ** i + random.uniform(0, 5)
+                print(e)
+                print(f"  Retry after {sleep} seconds")
+                time.sleep(sleep)

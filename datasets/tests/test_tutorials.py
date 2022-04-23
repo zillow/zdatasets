@@ -79,6 +79,8 @@ def run_flow(flow_py, args: Optional[list] = None, context: Optional[str] = None
         cmd.extend(args)
     process = run(cmd, cwd=dirname(base_dir), stdout=PIPE, stderr=STDOUT, encoding="utf8")
     stdout = process.stdout
+    if not process.returncode == 0:
+        print(stdout)
     assert process.returncode == 0, stdout
 
     return stdout

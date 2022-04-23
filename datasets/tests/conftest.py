@@ -29,6 +29,7 @@ def run_id() -> str:
 
 class TestExecutor(ProgramExecutor):
     current_context = Context.BATCH
+    test_run_time = int(time.time())
 
     @property
     def current_run_id(self) -> str:
@@ -48,7 +49,7 @@ class TestExecutor(ProgramExecutor):
 
     @property
     def run_time(self) -> int:
-        return _run_time
+        return TestExecutor.test_run_time
 
 
 DatasetPlugin.register_executor(executor=TestExecutor())
