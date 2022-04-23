@@ -1,6 +1,6 @@
 # isort: skip_file
 # flake8: noqa: F401
-import click
+from metaflow._vendor.click import ParamType
 
 from datasets.dataset_plugin import DatasetPlugin
 from datasets.datasets_decorator import dataset
@@ -10,7 +10,7 @@ from datasets.mode import Mode
 from datasets import plugins
 
 
-class DatasetTypeClass(click.ParamType):
+class DatasetTypeClass(ParamType):
     name = "Dataset"
 
     def convert(self, value, param, ctx):

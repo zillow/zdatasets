@@ -76,6 +76,10 @@ class BatchBasePlugin(DatasetPlugin, dict):
         filters: Optional[List[Tuple]] = None
         query_run_id = run_id if run_id else self.run_id
         if query_run_id:
+            max_int = 0x7FFFFFFF
+            if query_run_id.isnumeric() and int(query_run_id) < max_int:
+                # pyarrow may save the run_id as int if isnumeric and < max_int
+                query_run_id = int(query_run_id)
             filters = [("run_id", "=", query_run_id)]
 
         query_run_time = run_time if run_time else self.run_time

@@ -3,12 +3,11 @@ on:
   push:
     branches:
     - main
-    - tz/AIP-5016-batch-partitioned
     - tz/hive
   pull_request:
     branches:
     - main
-    - tz/AIP-5016-batch-partitioned
+    - tz/hive
   release:
     types:
     - created
