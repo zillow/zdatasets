@@ -6,7 +6,7 @@ from metaflow import FlowSpec, Parameter, step
 from datasets import DatasetType, Mode
 from datasets.context import Context
 from datasets.dataset_plugin import DatasetPlugin
-from datasets.plugins import BatchDataset, MetaflowExecutor
+from datasets.plugins import BatchDataset, BatchDatasetParams, MetaflowExecutor
 from datasets.tutorials.online_plugin import DefaultOnlineDatasetPlugin
 
 
@@ -30,7 +30,7 @@ class ConsistentFlow(FlowSpec):
     hello_ds = Parameter(
         name="hello_ds",
         type=DatasetType,
-        default=dict(name="HelloDs", columns="key,value", mode=Mode.READ_WRITE),
+        default=BatchDatasetParams(name="HelloDs", columns="key,value", mode=Mode.READ_WRITE),
     )
 
     @step

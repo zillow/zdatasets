@@ -1,13 +1,21 @@
+from dataclasses import dataclass
 from typing import TYPE_CHECKING, Optional, Tuple
 
 from datasets._typing import ColumnNames
 from datasets.context import Context
 from datasets.dataset_plugin import DatasetPlugin
 from datasets.plugins import BatchDataset
+from datasets.plugins.batch.batch_base_plugin import BatchBaseDatasetParams
 
 
 if TYPE_CHECKING:
     from metaflow import Run
+
+
+@dataclass
+class FlowDatasetParams(BatchBaseDatasetParams):
+    flow_dataset: str = ""
+    run_id: Optional[str] = "latest_successful_run"
 
 
 @DatasetPlugin.register(constructor_keys={"flow_dataset"}, context=Context.BATCH)

@@ -1,6 +1,7 @@
 import logging
 import random
 import time
+from dataclasses import dataclass
 from functools import partial
 from typing import TYPE_CHECKING, Callable, List, Optional, Union
 
@@ -11,7 +12,10 @@ from datasets._typing import ColumnNames
 from datasets.context import Context
 from datasets.dataset_plugin import DatasetPlugin
 from datasets.exceptions import InvalidOperationException
-from datasets.plugins.batch.batch_base_plugin import BatchBasePlugin
+from datasets.plugins.batch.batch_base_plugin import (
+    BatchBaseDatasetParams,
+    BatchBasePlugin,
+)
 from datasets.utils.case_utils import (
     is_upper_pascal_case,
     pascal_to_snake_case,
@@ -25,6 +29,12 @@ _logger.setLevel(logging.INFO)
 if TYPE_CHECKING:
     from pyspark import SparkConf, pandas as ps
     from pyspark.sql import DataFrame as SparkDataFrame, SparkSession
+
+
+@dataclass
+class HiveDatasetParams(BatchBaseDatasetParams):
+    is_hive_table: Optional[bool] = None
+    hive_table: Optional[str] = None
 
 
 @DatasetPlugin.register(constructor_keys={"is_hive_table", "hive_table"}, context=Context.BATCH)

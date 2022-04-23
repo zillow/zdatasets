@@ -1,5 +1,6 @@
 import logging
 import os
+from dataclasses import dataclass
 from typing import (
     TYPE_CHECKING,
     Callable,
@@ -21,6 +22,17 @@ _logger = logging.getLogger(__name__)
 if TYPE_CHECKING:
     from pyspark import SparkConf
     from pyspark.sql import SparkSession
+
+
+@dataclass
+class BatchBaseDatasetParams:
+    name: str
+    logical_key: str = None
+    columns: Optional[str] = None
+    run_id: Optional[str] = None
+    run_time: Optional[int] = None
+    mode: Mode = Mode.READ
+    partition_by: Optional[str] = None
 
 
 class BatchBasePlugin(DatasetPlugin, dict):

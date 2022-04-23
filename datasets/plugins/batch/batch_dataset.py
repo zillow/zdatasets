@@ -1,4 +1,5 @@
 import logging
+from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, List, Optional, Tuple, Union
 
@@ -9,7 +10,10 @@ from datasets._typing import ColumnNames, DataFrameType
 from datasets.context import Context
 from datasets.dataset_plugin import DatasetPlugin, dataset_name_validator
 from datasets.exceptions import InvalidOperationException
-from datasets.plugins.batch.batch_base_plugin import BatchBasePlugin
+from datasets.plugins.batch.batch_base_plugin import (
+    BatchBaseDatasetParams,
+    BatchBasePlugin,
+)
 from datasets.utils.case_utils import pascal_to_snake_case
 
 
@@ -20,6 +24,11 @@ if TYPE_CHECKING:
     import dask.dataframe as dd
     from pyspark import SparkConf, pandas as ps
     from pyspark.sql import DataFrame as SparkDataFrame
+
+
+@dataclass
+class BatchDatasetParams(BatchBaseDatasetParams):
+    path: Optional[Union[str, Path]] = None
 
 
 @DatasetPlugin.register(constructor_keys={"name"}, context=Context.BATCH)
