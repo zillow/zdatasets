@@ -181,6 +181,8 @@ class HiveDataset(BatchBasePlugin):
         df, partition_cols = self._write_data_frame_prep(df, partition_by=tmp_partition_by)
 
         _logger.info(f"write_spark({self.hive_table=}, {partition_cols=})")
+        # TODO(talebz): This retry is especially for the race condition when another parallel SparkJob
+        #   FileOutputCommitter removes the _temporary and this one gets /_temporary/0 not found.
         _retry_with_backoff(partial(self._write_spark_helper, spark, df, partition_cols, **kwargs))
 
     def _write_spark_helper(
