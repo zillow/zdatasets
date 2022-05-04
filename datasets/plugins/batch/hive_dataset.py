@@ -18,7 +18,6 @@ from datasets.plugins.batch.batch_base_plugin import (
 )
 from datasets.utils.case_utils import (
     is_upper_pascal_case,
-    pascal_to_snake_case,
     snake_case_to_pascal,
 )
 
@@ -54,11 +53,9 @@ class HiveDataset(BatchBasePlugin):
         if is_hive_table and hive_table is None and not is_upper_pascal_case(name):
             raise ValueError(f"{name=} is not upper pascal case.")
 
-        self.hive_table = hive_table if hive_table else pascal_to_snake_case(name)
-
         super(HiveDataset, self).__init__(
             name=name if name else snake_case_to_pascal(self.hive_table),
-            hive_table_name=self.hive_table,
+            hive_table=hive_table,
             logical_key=logical_key,
             columns=columns,
             run_id=run_id,

@@ -14,7 +14,6 @@ from datasets.plugins.batch.batch_base_plugin import (
     BatchBaseDatasetParams,
     BatchBasePlugin,
 )
-from datasets.utils.case_utils import pascal_to_snake_case
 
 
 _logger = logging.getLogger(__name__)
@@ -40,6 +39,7 @@ class BatchDataset(BatchBasePlugin):
     def __init__(
         self,
         name: str,
+        hive_table: Optional[str] = None,
         logical_key: str = None,
         columns: Optional[ColumnNames] = None,
         run_id: Optional[str] = None,
@@ -51,7 +51,7 @@ class BatchDataset(BatchBasePlugin):
         dataset_name_validator(name)
         super(BatchDataset, self).__init__(
             name=name,
-            hive_table_name=pascal_to_snake_case(name),
+            hive_table=hive_table,
             logical_key=logical_key,
             columns=columns,
             run_id=run_id,
