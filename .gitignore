@@ -7,6 +7,7 @@
 \#*
 .\#*
 
+
 # Buildout #
 ############
 .installed.cfg
@@ -88,3 +89,8 @@ man
 .Python
 
 pip-selfcheck.json
+metastore_db/*
+datasets/tutorials/data/*
+datasets/tests/data/datastore/*
+datasets/tests/data/ds1/*
+datasets/tests/data/pandas.csv
