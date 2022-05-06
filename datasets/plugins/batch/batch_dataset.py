@@ -42,7 +42,7 @@ class BatchDataset(BatchBasePlugin):
         dataset_name_validator(name)
         super(BatchDataset, self).__init__(
             name=name,
-            hive_table_name=pascal_to_snake_case(name),
+            hive_table=pascal_to_snake_case(name),
             logical_key=logical_key,
             columns=columns,
             run_id=run_id,
