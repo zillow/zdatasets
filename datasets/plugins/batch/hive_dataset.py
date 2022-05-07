@@ -45,7 +45,7 @@ class HiveDataset(BatchBasePlugin):
 
         super(HiveDataset, self).__init__(
             name=name if name else snake_case_to_pascal(hive_table),
-            hive_table=hive_table,
+            hive_table_name=hive_table,
             logical_key=logical_key,
             columns=columns,
             run_id=run_id,
@@ -93,9 +93,9 @@ class HiveDataset(BatchBasePlugin):
         spark: SparkSession = BatchBasePlugin._get_spark_builder(conf).enableHiveSupport().getOrCreate()
 
         _logger.info(
-            f"to_spark({self.hive_table=},{read_columns=},{partitions=},{run_id=},{run_time=},{filters=})"
+            f"to_spark({self.hive_table_name=},{read_columns=},{partitions=},{run_id=},{run_time=},{filters=})"
         )
-        df: DataFrame = spark.read.options(**kwargs).table(self.hive_table).select(*read_columns)
+        df: DataFrame = spark.read.options(**kwargs).table(self.hive_table_name).select(*read_columns)
 
         if filters:
             for name, _, val in filters:
@@ -146,14 +146,14 @@ class HiveDataset(BatchBasePlugin):
         HiveDataset._validate_columns(df)
 
         spark: SparkSession = BatchBasePlugin._get_spark_builder(conf).enableHiveSupport().getOrCreate()
-        table_exists: bool = spark.sql(f"SHOW TABLES LIKE '{self.hive_table}'").count() == 1
+        table_exists: bool = spark.sql(f"SHOW TABLES LIKE '{self.hive_table_name}'").count() == 1
         tmp_partition_by: Optional[ColumnNames] = None
         if table_exists:
             # Query for partition information,
             # for self._write_data_frame_prep() to add run_id,run_time if needed
             from pyspark import Row
 
-            desc_df: SparkDataFrame = spark.sql(f"desc {self.hive_table}")
+            desc_df: SparkDataFrame = spark.sql(f"desc {self.hive_table_name}")
             partition_list: List[Row] = desc_df.select(desc_df.col_name).collect()
 
             partition_index: Optional[int] = None
@@ -177,7 +177,7 @@ class HiveDataset(BatchBasePlugin):
 
         df, partition_cols = self._write_data_frame_prep(df, partition_by=tmp_partition_by)
 
-        _logger.info(f"write_spark({self.hive_table=}, {partition_cols=})")
+        _logger.info(f"write_spark({self.hive_table_name=}, {partition_cols=})")
         # TODO(talebz): This retry is especially for the race condition when another parallel SparkJob
         #   FileOutputCommitter removes the _temporary and this one gets /_temporary/0 not found.
         _retry_with_backoff(partial(self._write_spark_helper, spark, df, partition_cols, **kwargs))
@@ -193,28 +193,28 @@ class HiveDataset(BatchBasePlugin):
         #      Overwrite mode means that when saving a DataFrame to a data source,
         #      if data/table already exists, existing data is expected to be overwritten
         #      by the contents of the DataFrame.
-        table_exists: bool = spark.sql(f"SHOW TABLES LIKE '{self.hive_table}'").count() == 1
+        table_exists: bool = spark.sql(f"SHOW TABLES LIKE '{self.hive_table_name}'").count() == 1
         if table_exists:
             (
-                df.select(spark.table(self.hive_table).columns)
+                df.select(spark.table(self.hive_table_name).columns)
                 .write.options(**kwargs)
-                .insertInto(self.hive_table)
+                .insertInto(self.hive_table_name)
             )
         else:
             path = self._get_dataset_path()
-            _logger.info(f"{self.hive_table=} does not exist: creating {path=}!")
+            _logger.info(f"{self.hive_table_name=} does not exist: creating {path=}!")
             (
                 df.write.mode("append")
                 .option("path", self._get_dataset_path())
                 .partitionBy(partition_cols)
                 .options(**kwargs)
-                .saveAsTable(self.hive_table)
+                .saveAsTable(self.hive_table_name)
             )
 
             create_view_query = f"""
-            CREATE OR REPLACE VIEW {self.hive_table}_latest AS
+            CREATE OR REPLACE VIEW {self.hive_table_name}_latest AS
             SELECT * FROM (
-                SELECT s.*, RANK() OVER(ORDER BY run_time DESC) rank FROM {self.hive_table} s
+                SELECT s.*, RANK() OVER(ORDER BY run_time DESC) rank FROM {self.hive_table_name} s
             ) s
             WHERE rank=1
             """
@@ -222,7 +222,7 @@ class HiveDataset(BatchBasePlugin):
 
     def __repr__(self):
         return (
-            f"HiveDataset({self.hive_table=},{self.name=},{self.key=},{self.partition_by=},"
+            f"HiveDataset({self.hive_table_name=},{self.name=},{self.key=},{self.partition_by=},"
             f"{self.run_id=},{self.run_time=},{self.columns=},{self.mode=}"
         )
 

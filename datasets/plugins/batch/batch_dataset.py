@@ -10,7 +10,6 @@ from datasets.context import Context
 from datasets.dataset_plugin import DatasetPlugin, dataset_name_validator
 from datasets.exceptions import InvalidOperationException
 from datasets.plugins.batch.batch_base_plugin import BatchBasePlugin
-from datasets.utils.case_utils import pascal_to_snake_case
 
 
 _logger = logging.getLogger(__name__)
@@ -38,11 +37,12 @@ class BatchDataset(BatchBasePlugin):
         mode: Mode = Mode.READ,
         partition_by: Optional[ColumnNames] = None,
         path: Optional[Union[str, Path]] = None,
+        hive_table_name: Optional[str] = None,
     ):
         dataset_name_validator(name)
         super(BatchDataset, self).__init__(
             name=name,
-            hive_table=pascal_to_snake_case(name),
+            hive_table_name=hive_table_name,
             logical_key=logical_key,
             columns=columns,
             run_id=run_id,
