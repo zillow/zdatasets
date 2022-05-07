@@ -60,7 +60,7 @@ def df() -> pd.DataFrame:
 
 def test_from_keys_offline_plugin(dataset: HiveDataset, hive_table: str):
     assert dataset.name == "Foo"
-    assert dataset.hive_table == hive_table
+    assert dataset.hive_table_name == hive_table
     assert dataset.key == "col1"
     assert dataset.partition_by == "col1,col3"
 
@@ -76,7 +76,7 @@ def test_from_keys_is_hive_table(partition_by: str, mode: Mode, columns: str):
         mode=mode,
     )
     assert dataset.name == "FooFoo"
-    assert dataset.hive_table == "foo_foo"
+    assert dataset.hive_table_name == "foo_foo"
     assert dataset.key == "col1"
     assert dataset.partition_by == "col1,col3"
 
@@ -108,12 +108,12 @@ def test_from_read_on_mode_write(dataset: HiveDataset):
 @pytest.mark.parametrize("partition_by", ["col1,col3"])
 @pytest.mark.spark
 def test_hive_to_spark(dataset: HiveDataset, df: pd.DataFrame, spark_session: SparkSession):
-    # spark_session.sql(f"DESCRIBE FORMATTED {dataset.hive_table}").show(truncate=False, n=100)
+    # spark_session.sql(f"DESCRIBE FORMATTED {dataset.hive_table_name}").show(truncate=False, n=100)
     # Create the Hive Table
     dataset.write(df)
 
     partition_col = (
-        spark_session.sql(f"""show partitions {dataset.hive_table}""")
+        spark_session.sql(f"""show partitions {dataset.hive_table_name}""")
         .rdd.map(lambda x: x[0])
         .map(lambda x: [l.split("=")[0] for l in x.split("/")])  # noqa: E741
         .first()
@@ -161,7 +161,7 @@ def test_hive_to_spark(dataset: HiveDataset, df: pd.DataFrame, spark_session: Sp
         assert latest_df["run_time"].unique().tolist() == [TestExecutor.test_run_time]
 
     validate_latest(dataset.to_spark_pandas(columns="col1,col2,col3,run_time").to_pandas())
-    validate_latest(spark_session.sql(f"SELECT * FROM {dataset.hive_table}_latest").toPandas())
+    validate_latest(spark_session.sql(f"SELECT * FROM {dataset.hive_table_name}_latest").toPandas())
 
 
 @pytest.mark.parametrize("hive_table", ["test_hive_write_existing_table_run_id"])
