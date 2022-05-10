@@ -1,5 +1,4 @@
 import logging
-from datetime import datetime
 from typing import Iterable, Optional, Tuple
 from urllib.parse import ParseResult, urlparse
 
@@ -9,7 +8,6 @@ from botocore.credentials import (
     DeferredRefreshableCredentials,
 )
 from botocore.session import Session
-from dateutil.tz import tzlocal
 
 
 _logger = logging.getLogger(__name__)
