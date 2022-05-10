@@ -46,6 +46,7 @@ def get_aws_session(role_arn: str = None, profile_name: str = None) -> Session:
         aws_session_token=credentials.token,
     )
 
+
 def get_aws_client(role_arn: str, service: str):
     """
     Args:
