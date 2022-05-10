@@ -27,7 +27,7 @@ def get_aws_session(role_arn: str = None, profile_name: str = None) -> Session:
 
     if role_arn is None:
         return source_session
-    
+
     # Fetch assumed role's credentials
     fetcher = AssumeRoleCredentialFetcher(
         client_creator=source_session._session.create_client,
@@ -37,16 +37,14 @@ def get_aws_session(role_arn: str = None, profile_name: str = None) -> Session:
 
     # Retrieve crednetials of the assumed role and auto-refresh
     credentials = DeferredRefreshableCredentials(
-        method="assume-role",
-        refresh_using=fetcher.fetch_credentials
+        method="assume-role", refresh_using=fetcher.fetch_credentials
     )
 
     return boto3.Session(
-                         aws_access_key_id=credentials.access_key,
-                         aws_secret_access_key=credentials.secret_key,
-                         aws_session_token=credentials.token
-           )
-
+        aws_access_key_id=credentials.access_key,
+        aws_secret_access_key=credentials.secret_key,
+        aws_session_token=credentials.token,
+    )
 
 def get_aws_client(role_arn: str, service: str):
     """
