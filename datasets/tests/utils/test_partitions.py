@@ -51,7 +51,7 @@ def test_get_path_partitions_suffix(data_path: Path, assume_role: str):
 def test_load_partitions_s3(assume_role: str, region_partitioned_paths: List[str]):
     bucket_name = "test-bucket"
     path = f"s3://{bucket_name}/data/models/"
-    get_aws_session() # test with default iam role
+    get_aws_session()  # test with default iam role
     s3 = get_aws_client(assume_role, "s3")
     s3.create_bucket(Bucket=bucket_name, CreateBucketConfiguration={"LocationConstraint": "us-west-2"})
     for region_path in region_partitioned_paths:
