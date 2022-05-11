@@ -20,10 +20,12 @@ def get_aws_session(role_arn: str = None, profile_name: str = None) -> Session:
         profile_name: AWS profile
     Returns: boto3 Session
     """
+    region_name = "us-west-2"
+
     if profile_name:
-        source_session = boto3.Session(profile_name=profile_name)
+        source_session = boto3.Session(profile_name=profile_name, region_name=region_name)
     else:
-        source_session = boto3.Session()
+        source_session = boto3.Session(region_name=region_name)
 
     if role_arn is None:
         return source_session
@@ -44,6 +46,7 @@ def get_aws_session(role_arn: str = None, profile_name: str = None) -> Session:
         aws_access_key_id=credentials.access_key,
         aws_secret_access_key=credentials.secret_key,
         aws_session_token=credentials.token,
+        region_name=region_name,
     )
 
 
@@ -56,12 +59,7 @@ def get_aws_client(role_arn: str, service: str):
     Returns: Returns an AWS client
 
     """
-    if role_arn is None:
-        session = boto3.Session(region_name="us-west-2")
-    else:
-        botocore_session = get_aws_session(role_arn)
-        session = boto3.Session(botocore_session=botocore_session, region_name="us-west-2")
-
+    session = get_aws_session(role_arn)
     return session.client(service)
 
 
