@@ -4,7 +4,7 @@ from typing import List
 import pytest
 from moto import mock_s3, mock_sts
 
-from datasets.utils.aws import get_aws_session, get_aws_client
+from datasets.utils.aws import get_aws_client
 from datasets.utils.partitions import Partition, get_path_partitions
 
 
