@@ -1,5 +1,4 @@
 import logging
-from datetime import datetime
 from typing import Iterable, Optional, Tuple
 from urllib.parse import ParseResult, urlparse
 
@@ -9,36 +8,46 @@ from botocore.credentials import (
     DeferredRefreshableCredentials,
 )
 from botocore.session import Session
-from dateutil.tz import tzlocal
 
 
 _logger = logging.getLogger(__name__)
 
 
-def get_aws_session(role_arn: str) -> Session:
+def get_aws_session(role_arn: str = None, profile_name: str = None) -> Session:
     """
     Args:
         role_arn: AWS ARN
+        profile_name: AWS profile
     Returns: boto3 Session
     """
-    source_session = boto3.Session()
+    region_name = "us-west-2"
 
-    # Use profile to fetch assume role credentials
+    if profile_name:
+        source_session = boto3.Session(profile_name=profile_name, region_name=region_name)
+    else:
+        source_session = boto3.Session(region_name=region_name)
+
+    if role_arn is None:
+        return source_session
+
+    # Fetch assumed role's credentials
     fetcher = AssumeRoleCredentialFetcher(
         client_creator=source_session._session.create_client,
         source_credentials=source_session.get_credentials(),
         role_arn=role_arn,
     )
 
-    # Create new session with assumed role and auto-refresh
-    botocore_session = Session()
-    botocore_session._credentials = DeferredRefreshableCredentials(
-        method="assume-role",
-        refresh_using=fetcher.fetch_credentials,
-        time_fetcher=lambda: datetime.now(tzlocal()),
+    # Retrieve crednetials of the assumed role and auto-refresh
+    credentials = DeferredRefreshableCredentials(
+        method="assume-role", refresh_using=fetcher.fetch_credentials
     )
 
-    return botocore_session
+    return boto3.Session(
+        aws_access_key_id=credentials.access_key,
+        aws_secret_access_key=credentials.secret_key,
+        aws_session_token=credentials.token,
+        region_name=region_name,
+    )
 
 
 def get_aws_client(role_arn: str, service: str):
@@ -50,12 +59,7 @@ def get_aws_client(role_arn: str, service: str):
     Returns: Returns an AWS client
 
     """
-    if role_arn is None:
-        session = boto3.Session(region_name="us-west-2")
-    else:
-        botocore_session = get_aws_session(role_arn)
-        session = boto3.Session(botocore_session=botocore_session, region_name="us-west-2")
-
+    session = get_aws_session(role_arn)
     return session.client(service)
 
 
