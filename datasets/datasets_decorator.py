@@ -1,23 +1,40 @@
 import functools
 import keyword
-from typing import Callable, Optional
+from typing import Callable, Dict, Optional, Union
 
-from datasets import DatasetPlugin
-from datasets.context import Context
+from datasets._typing import ColumnNames
+from datasets.dataset_plugin import Context, DatasetPlugin, StorageOptions
+from datasets.mode import Mode
 from datasets.utils.case_utils import pascal_to_snake_case
 
 
 def dataset(
-    name: str = None,
+    name: Optional[str] = None,
+    logical_key: Optional[str] = None,
+    columns: Optional[ColumnNames] = None,
+    run_id: Optional[str] = None,
+    run_time: Optional[int] = None,
+    mode: Union[Mode, str] = Mode.READ,
+    options: Optional[Union[StorageOptions, Dict[Context, StorageOptions]]] = None,
+    context: Optional[Union[Context, str]] = None,
     field_name: Optional[str] = None,
-    context: Optional[Context] = None,
     **dataset_kwargs,
 ):
     def step_decorator(func: Callable):
         @functools.wraps(func)
         def step_wrapper(*args, **kwargs):
             self = args[0]
-            dataset = DatasetPlugin.from_keys(name=name, context=context, **dataset_kwargs)
+            dataset = DatasetPlugin.Dataset(
+                name=name,
+                logical_key=logical_key,
+                columns=columns,
+                run_id=run_id,
+                run_time=run_time,
+                mode=mode,
+                options=options,
+                context=context,
+                **dataset_kwargs,
+            )
 
             if field_name:
                 if not field_name.isidentifier() or keyword.iskeyword(field_name):

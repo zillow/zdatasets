@@ -3,7 +3,7 @@ from datetime import datetime
 from dateutil import parser
 
 from datasets.context import Context
-from datasets.dataset_plugin import ProgramExecutor
+from datasets.program_executor import ProgramExecutor
 
 
 class MetaflowExecutor(ProgramExecutor):

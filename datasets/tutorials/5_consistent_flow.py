@@ -3,11 +3,15 @@ import os
 import pandas as pd
 from metaflow import FlowSpec, Parameter, step
 
-from datasets import DatasetType, Mode
+from datasets import Dataset, DatasetType, Mode
 from datasets.context import Context
 from datasets.dataset_plugin import DatasetPlugin
 from datasets.plugins import BatchDataset, MetaflowExecutor
-from datasets.tutorials.online_plugin import DefaultOnlineDatasetPlugin
+from datasets.plugins.batch.batch_base_plugin import BatchOptions
+from datasets.tutorials.online_plugin import (
+    DefaultOnlineDatasetPlugin,
+    OnlineOptions,
+)
 
 
 class PortableExecutor(MetaflowExecutor):
@@ -30,7 +34,15 @@ class ConsistentFlow(FlowSpec):
     hello_ds = Parameter(
         name="hello_ds",
         type=DatasetType,
-        default=dict(name="HelloDs", columns="key,value", mode=Mode.READ_WRITE),
+        default=Dataset(
+            name="HelloDs",
+            columns="key,value",
+            mode=Mode.READ_WRITE,
+            options={
+                Context.BATCH: BatchOptions,
+                Context.ONLINE: OnlineOptions,
+            },
+        ),
     )
 
     @step

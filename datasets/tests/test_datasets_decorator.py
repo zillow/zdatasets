@@ -1,20 +1,20 @@
 import pytest
 
 from datasets import dataset
-from datasets.plugins import BatchDataset
+from datasets.plugins import HiveDataset
 
 
 def test_step_decorator():
     class Foo:
-        @dataset(name="DsFee")
+        @dataset("DsFee")
         def hi(self):
             assert self.ds_fee.name == "DsFee"
-            assert isinstance(self.ds_fee, BatchDataset)
+            assert isinstance(self.ds_fee, HiveDataset)
 
     foo = Foo()
     foo.hi()
     assert foo.ds_fee.name == "DsFee"
-    assert isinstance(foo.ds_fee, BatchDataset)
+    assert isinstance(foo.ds_fee, HiveDataset)
 
 
 def test_step_decorator_class_field_name():
@@ -24,12 +24,12 @@ def test_step_decorator_class_field_name():
         @dataset(name=ds_name, field_name="ds_fee")
         def hi(self):
             assert self.ds_fee.name == ds_name
-            assert isinstance(self.ds_fee, BatchDataset)
+            assert isinstance(self.ds_fee, HiveDataset)
 
     foo = Foo()
     foo.hi()
     assert foo.ds_fee.name == ds_name
-    assert isinstance(foo.ds_fee, BatchDataset)
+    assert isinstance(foo.ds_fee, HiveDataset)
 
 
 def test_step_decorator_class_bad_name():

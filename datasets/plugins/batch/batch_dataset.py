@@ -1,5 +1,4 @@
 import logging
-from pathlib import Path
 from typing import TYPE_CHECKING, List, Optional, Tuple, Union
 
 import pandas as pd
@@ -9,7 +8,10 @@ from datasets._typing import ColumnNames, DataFrameType
 from datasets.context import Context
 from datasets.dataset_plugin import DatasetPlugin, dataset_name_validator
 from datasets.exceptions import InvalidOperationException
-from datasets.plugins.batch.batch_base_plugin import BatchBasePlugin
+from datasets.plugins.batch.batch_base_plugin import (
+    BatchBasePlugin,
+    BatchOptions,
+)
 
 
 _logger = logging.getLogger(__name__)
@@ -21,7 +23,7 @@ if TYPE_CHECKING:
     from pyspark.sql import DataFrame as SparkDataFrame
 
 
-@DatasetPlugin.register(constructor_keys={"name"}, context=Context.BATCH)
+@DatasetPlugin.register(context=Context.BATCH, options=BatchOptions)
 class BatchDataset(BatchBasePlugin):
     """
     The default plugin for the BATCH execution context.
@@ -35,25 +37,24 @@ class BatchDataset(BatchBasePlugin):
         run_id: Optional[str] = None,
         run_time: Optional[int] = None,
         mode: Mode = Mode.READ,
-        partition_by: Optional[ColumnNames] = None,
-        path: Optional[Union[str, Path]] = None,
-        hive_table_name: Optional[str] = None,
+        options: Optional[BatchOptions] = BatchOptions(),
     ):
         dataset_name_validator(name)
         super(BatchDataset, self).__init__(
             name=name,
-            hive_table_name=hive_table_name,
             logical_key=logical_key,
             columns=columns,
             run_id=run_id,
             run_time=run_time,
             mode=mode,
-            partition_by=partition_by,
+            options=options,
         )
-        self.path = path
-        self._path: Optional[str] = path
-        if path:
-            self["path"] = path
+        self.path = self._path = None
+        if options and isinstance(options, BatchOptions):
+            self.path = options.path
+            self._path: Optional[str] = options.path
+            if options.path:
+                self["path"] = options.path
 
     def to_spark_pandas(
         self,
@@ -83,7 +84,7 @@ class BatchDataset(BatchBasePlugin):
         filters, read_columns = self._get_filters_columns(columns, run_id, run_time, partitions)
         self._path = self._get_dataset_path()
         _logger.info(
-            f"to_pandas({self.path=},{read_columns=},{partitions=},{run_id=},{run_time=},{filters=})"
+            f"to_pandas({self._path=},{read_columns=},{partitions=},{run_id=},{run_time=},{filters=})"
         )
 
         df: pd.DataFrame
@@ -220,7 +221,7 @@ class BatchDataset(BatchBasePlugin):
     def write_pandas(self, df: pd.DataFrame, partition_by: Optional[ColumnNames] = None, **kwargs):
         df, partition_cols = self._path_write_data_frame_prep(df, partition_by=partition_by)
         self._path = self._get_dataset_path()
-        _logger.info(f"write_pandas({self._path=}, {partition_cols=})")
+        print(f"write_pandas({self._path=}, {partition_cols=})")
         df.to_parquet(
             self._path,
             engine=kwargs.get("engine", "pyarrow"),

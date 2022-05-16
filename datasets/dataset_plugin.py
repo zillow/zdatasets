@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 import logging
-from abc import ABC
-from typing import Callable, Dict, Iterable, Optional, Union
+from dataclasses import dataclass
+from typing import Callable, Dict, Iterable, Optional, Tuple, Type, Union
 
 from datasets._typing import ColumnNames
 from datasets.context import Context
@@ -16,15 +16,19 @@ _logger = logging.getLogger(__name__)
 _logger.setLevel(logging.DEBUG)
 
 
-class DatasetPlugin(ABC):
+@dataclass
+class StorageOptions:
+    pass
+
+
+class DatasetPlugin:
     """
     All dataset plugins derive from this class.
-    To register as a dataset they must decorate themselves with or call DatasetPlugin.register()
+    To register as a dataset they must decorate themselves with or call Dataset.register()
     """
 
     _executor: ProgramExecutor
-    # Context -> constructor_keys -> dataset plugin
-    _plugins: Dict[Context, Dict[set[str], DatasetPlugin]] = {}
+    _plugins: Dict[StorageOptions, Dataset] = {}
     _META_COLUMNS = ["run_id", "run_time"]
 
     def __init__(
@@ -35,6 +39,7 @@ class DatasetPlugin(ABC):
         run_id: Optional[str] = None,
         run_time: Optional[int] = None,
         mode: Union[Mode, str] = Mode.READ,
+        options: Optional[StorageOptions] = None,
     ):
         """
 
@@ -54,44 +59,38 @@ class DatasetPlugin(ABC):
         self.columns = columns
         self.run_id = run_id
         self.run_time = run_time
+        self.options = options
 
     @classmethod
-    def from_keys(cls, context: Optional[Union[Context, str]] = None, **kwargs) -> DatasetPlugin:
-        """
-        Factory method for datasets. Not directly used by the user.
-        For example usage please see test_from_keys*() unit tests.
-
-        :param context: If not specified it uses the current executor context.
-        :param kwargs: dataset constructor args
-        :return: found DatasetPlugin
-        """
-        dataset_args = set(kwargs.keys())
-
-        context_lookup = cls._get_context(context)
-
-        default_plugin: Optional[DatasetPlugin] = None
-        max_intersect_count = 0
-        ret_plugin = None
-
-        for plugin_context in (
-            plugin_context for plugin_context in cls._plugins.keys() if context_lookup & plugin_context
-        ):
-            for plugin_keys, plugin in cls._plugins[plugin_context].items():
-                if len(plugin_keys.intersection(dataset_args)) > 0:
-                    if plugin_keys == {"name"}:
-                        default_plugin = plugin
-                    else:
-                        match_count = len(plugin_keys.intersection(dataset_args))
-                        if match_count > max_intersect_count:
-                            max_intersect_count = match_count
-                            ret_plugin = plugin
-
-        if ret_plugin:
-            return ret_plugin(**kwargs)
-        elif default_plugin:
-            return default_plugin(**kwargs)
-        else:
-            raise ValueError(f"f{kwargs} and {context_lookup=} not found in {cls._plugins}")
+    def Dataset(
+        cls,
+        name: Optional[str] = None,
+        logical_key: Optional[str] = None,
+        columns: Optional[ColumnNames] = None,
+        run_id: Optional[str] = None,
+        run_time: Optional[int] = None,
+        mode: Union[Mode, str] = Mode.READ,
+        options: Optional[Union[StorageOptions, Dict[Context, StorageOptions]]] = None,
+        context: Optional[Union[Context, str]] = None,
+        *args,
+        **kwargs,
+    ):
+        if name:
+            dataset_name_validator(name)
+        # Use InitialCaps for class names (or for factory functions that return classes).
+        plugin: Type
+        plugin, options = plugin_factory(cls._plugins, context=context, options=options)
+        return plugin(
+            name=name,
+            logical_key=logical_key,
+            columns=columns,
+            run_id=run_id,
+            run_time=run_time,
+            mode=mode,
+            options=options,
+            *args,
+            **kwargs,
+        )
 
     @classmethod
     def _get_context(cls, context: Optional[Union[Context, str]] = None) -> Context:
@@ -100,25 +99,12 @@ class DatasetPlugin(ABC):
         else:
             return cls._executor.context
 
+    # C901 'DatasetPlugin.register' is too complex (9)
+    # flake8: noqa: C901
     @classmethod
-    def register(cls, constructor_keys: set[str], context: Context) -> Callable:
-        """
-        Registration method for a dataset plugin.
-        Plugins are looked up by (constructor_keys, context), so no two can be registered at the same time.
-
-        Plugins are constructed by from_keys(), by ensuring that the current
-        ProgramExecutor.context == plugin.context
-        and that plugin.constructor_keys.issubset(dataset_arguments)
-
-        constructor_keys="name" is a special case and is loaded last if no other plugins are found
-
-        :param constructor_keys: set of dataset constructor keys
-        :param context: defaults to batch, but is the context this plugin supports
-        :return: decorated class
-        """
-        if constructor_keys is None:
-            raise ValueError("constructor_keys cannot be None!")
-
+    def register(
+        cls, context=Context.BATCH, options: StorageOptions = None, as_default_context_plugin: bool = False
+    ) -> Callable:
         if context is None:
             raise ValueError("context cannot be None!")
 
@@ -126,17 +112,17 @@ class DatasetPlugin(ABC):
             raise ValueError(f"{context=} is not of type(Context)!")
 
         def inner_wrapper(wrapped_class: DatasetPlugin) -> DatasetPlugin:
-            if context not in cls._plugins:
-                cls._plugins[context] = {}
+            if as_default_context_plugin:
+                if context in default_context_plugins:
+                    raise ValueError(f"{context=} already registered in {default_context_plugins=}")
+                default_context_plugins[context] = wrapped_class
 
-            keys = frozenset(constructor_keys)
-
-            if keys in cls._plugins[context] and wrapped_class != cls._plugins[context][keys]:
-                raise ValueError(
-                    f"{constructor_keys} already registered as a " f"dataset plugin as {context}!"
-                )
-
-            cls._plugins[context][keys] = wrapped_class
+            if options:
+                if options in cls._plugins:
+                    raise ValueError(f"{options=} already registered in {cls._plugins=}")
+                if options in cls._plugins and wrapped_class != cls._plugins[options]:
+                    raise ValueError(f"{options=} already registered as a dataset plugin in {cls._plugins=}!")
+                cls._plugins[options] = wrapped_class
             return wrapped_class
 
         return inner_wrapper
@@ -152,7 +138,7 @@ class DatasetPlugin(ABC):
         return read_columns
 
     def __repr__(self):
-        return f"DatasetPlugin({self.name=},{self.mode=},{self.key=},{self.columns=})"
+        return f"Dataset({self.name=},{self.mode=},{self.key=},{self.columns=})"
 
 
 def _validate_dataset_name(name: str):
@@ -166,3 +152,33 @@ def _validate_dataset_name(name: str):
 
 
 dataset_name_validator: Callable = _validate_dataset_name
+
+
+def _default_plugin_factory(
+    registered_plugins: Dict[StorageOptions, DatasetPlugin],
+    context: Optional[Union[Context, str]] = None,
+    options: Optional[Union[StorageOptions, Dict[Context, StorageOptions]]] = None,
+) -> Tuple[DatasetPlugin, Optional[StorageOptions]]:
+    context_lookup: Context = DatasetPlugin._get_context(context)
+
+    if options is None:
+        return (default_context_plugins[context_lookup], None)
+
+    if isinstance(options, StorageOptions):
+        if type(options) not in registered_plugins:
+            raise ValueError(f"{type(options)=} not in {registered_plugins.keys=}")
+        return (registered_plugins[type(options)], options)
+    elif isinstance(options, dict):
+        if context_lookup not in options:
+            raise ValueError(f"{context_lookup=} not in {options.keys=}")
+        options = options[context_lookup]
+        plugin = registered_plugins[options]
+        return (plugin, options)
+
+
+plugin_factory: Callable[
+    [Dict[StorageOptions, DatasetPlugin], Context, Optional[StorageOptions]],
+    Tuple[DatasetPlugin, Optional[StorageOptions]],
+] = _default_plugin_factory
+
+default_context_plugins: Dict[Context, DatasetPlugin] = dict()

@@ -1,100 +1,136 @@
+from dataclasses import dataclass
+
 import pandas as pd
 import pytest
 
+from datasets import Dataset
 from datasets.context import Context
-from datasets.dataset_plugin import DatasetPlugin
-from datasets.plugins import BatchDataset
+from datasets.dataset_plugin import DatasetPlugin, StorageOptions
+from datasets.plugins import HiveDataset
 from datasets.tests.conftest import TestExecutor
 
 
-@DatasetPlugin.register(constructor_keys={"name"}, context=Context.STREAMING)
+@DatasetPlugin.register(context=Context.STREAMING, as_default_context_plugin=True)
 class DefaultStreamingDatasetPluginTest(DatasetPlugin):
-    def __init__(self, **kwargs):
-        super(DefaultStreamingDatasetPluginTest, self).__init__(**kwargs)
+    def __init__(self, *args, **kwargs):
+        super(DefaultStreamingDatasetPluginTest, self).__init__(*args, **kwargs)
 
 
-@DatasetPlugin.register(constructor_keys={"name"}, context=Context.ONLINE)
+@DatasetPlugin.register(context=Context.ONLINE, as_default_context_plugin=True)
 class DefaultOnlineDatasetPluginTest(DatasetPlugin):
     def __init__(self, **kwargs):
         super(DefaultOnlineDatasetPluginTest, self).__init__(**kwargs)
 
 
-@DatasetPlugin.register(constructor_keys={"test_name"}, context=Context.BATCH)
-class NameDatasetPluginTest(DatasetPlugin):
+@dataclass
+class DatasetTestOptions(StorageOptions):
+    a: str
+
+
+@DatasetPlugin.register(context=Context.BATCH, options=DatasetTestOptions)
+class DatasetPluginTest(DatasetPlugin):
     db = pd.DataFrame(
         {"key": ["first", "second", "third", "fourth"], "value": [1, 2, 3, 4]},
     )
     db.set_index("key")
 
-    def __init__(self, test_name: str, **kwargs):
-        super(NameDatasetPluginTest, self).__init__(name=test_name, **kwargs)
+    def __init__(self, name: str, options: DatasetTestOptions, **kwargs):
+        self.a = options.a
+        super(DatasetPluginTest, self).__init__(name=name, options=options, **kwargs)
 
     def to_pandas(self, key) -> pd.DataFrame:
         return self.db[self.db.key.isin(key)]
 
 
-@DatasetPlugin.register(constructor_keys={"test_name", "test_name2"}, context=Context.BATCH)
-class Name2DatasetPluginTest(DatasetPlugin):
-    def __init__(self, test_name: str, test_name2: str, **kwargs):
-        super(Name2DatasetPluginTest, self).__init__(name=f"{test_name}{test_name2}", **kwargs)
+@dataclass
+class DatasetTestOptions2(StorageOptions):
+    a: str
+    b: str
 
 
-@DatasetPlugin.register(constructor_keys={"test_fee"}, context=Context.ONLINE | Context.STREAMING)
+@DatasetPlugin.register(context=Context.BATCH, options=DatasetTestOptions2)
+class DatasetPluginTest2(DatasetPlugin):
+    def __init__(self, name: str, options: DatasetTestOptions2, **kwargs):
+        self.c = f"{options.a}{options.b}"
+        super(DatasetPluginTest2, self).__init__(name=name, options=options, **kwargs)
+
+
+@dataclass
+class FeeOnlineDatasetOptions(StorageOptions):
+    test_fee: str
+
+
+@DatasetPlugin.register(context=Context.ONLINE | Context.STREAMING, options=FeeOnlineDatasetOptions)
 class FeeOnlineDatasetPluginTest(DatasetPlugin):
-    def __init__(self, test_fee: str, **kwargs):
-        super(FeeOnlineDatasetPluginTest, self).__init__(name=test_fee, **kwargs)
+    def __init__(self, name: str, options: FeeOnlineDatasetOptions, **kwargs):
+        self.test_fee = options.test_fee
+        super(FeeOnlineDatasetPluginTest, self).__init__(name=name, options=options, **kwargs)
 
 
-def test_from_keys_dataset_factory_latency():
+def test_dataset_factory_latency():
     import datetime
 
     a = datetime.datetime.now()
-    dataset = DatasetPlugin.from_keys(test_name="Foo")
+    dataset = Dataset("Foo", options=DatasetTestOptions(a="Foo"))
     b = datetime.datetime.now()
     c = b - a
     assert c.microseconds < 500  # less than 0.5 ms, it actually takes ~24 microseconds
 
     assert dataset.name == "Foo"
-    assert isinstance(dataset, NameDatasetPluginTest)
+    assert isinstance(dataset, DatasetPluginTest)
 
 
-def test_from_keys():
-    dataset = DatasetPlugin.from_keys(name="Foo")
-    assert isinstance(dataset, BatchDataset)
+def test_dataset_factory_constructor():
+    dataset = Dataset("FooName")
+    assert isinstance(dataset, HiveDataset)
+    assert dataset.name == "FooName"
 
-    dataset = DatasetPlugin.from_keys(test_name="Foo")
-    assert dataset.name == "Foo"
+    dataset = Dataset("FooName", options=DatasetTestOptions("Foo"))
+    assert dataset.name == "FooName"
+    assert dataset.a == "Foo"
     assert dataset.to_pandas(["first", "fourth"])["value"].to_list() == [1, 4]
-    assert isinstance(dataset, NameDatasetPluginTest)
+    assert isinstance(dataset, DatasetPluginTest)
 
-    dataset = DatasetPlugin.from_keys(test_name="Ta", test_name2="Tb")
-    assert dataset.name == "TaTb"
-    assert isinstance(dataset, Name2DatasetPluginTest)
+    dataset = Dataset("Tata", options=DatasetTestOptions2(a="Ta", b="Tb"))
+    assert dataset.name == "Tata"
+    assert dataset.c == "TaTb"
+    assert isinstance(dataset, DatasetPluginTest2)
 
-    dataset = DatasetPlugin.from_keys(test_fee="TestFee", context=Context.ONLINE)
+    dataset = Dataset("TestFee", options=FeeOnlineDatasetOptions(test_fee="TestFee"), context=Context.ONLINE)
     assert dataset.name == "TestFee"
-    assert isinstance(dataset, FeeOnlineDatasetPluginTest)
-
-    dataset = DatasetPlugin.from_keys(test_fee="TestFee", context=Context.STREAMING)
-    assert dataset.name == "TestFee"
-    assert isinstance(dataset, FeeOnlineDatasetPluginTest)
-
-    dataset = DatasetPlugin.from_keys(test_fee="TestFee", context="STREAMING")
+    assert dataset.test_fee == "TestFee"
     assert isinstance(dataset, FeeOnlineDatasetPluginTest)
 
 
-def test_from_keys_consistent_access():
-    dataset = DatasetPlugin.from_keys(name="Foo")
+def test_dataset_factory_constructor_unhappy():
+    class UnHappyOptions(StorageOptions):
+        pass
+
+    options = UnHappyOptions()
+    with pytest.raises(ValueError) as exec_info:
+        Dataset("FooName", options=options)
+    assert f"{type(options)=} not in" in str(exec_info.value)
+
+    options = {Context.ONLINE: options}
+    with pytest.raises(ValueError) as exec_info:
+        Dataset("FooName", options=options)
+
+    context_lookup = Context.BATCH
+    assert f"{context_lookup=} not in {options.keys=}" in str(exec_info.value)
+
+
+def test_dataset_factory_consistent_access():
+    dataset = Dataset("Foo")
     assert dataset.name == "Foo"
-    assert isinstance(dataset, BatchDataset)
+    assert isinstance(dataset, HiveDataset)
 
     TestExecutor.current_context = Context.STREAMING
-    dataset = DatasetPlugin.from_keys(name="Foo")
+    dataset = Dataset("Foo")
     assert dataset.name == "Foo"
     assert isinstance(dataset, DefaultStreamingDatasetPluginTest)
 
     TestExecutor.current_context = Context.ONLINE
-    dataset = DatasetPlugin.from_keys(name="Foo")
+    dataset = Dataset(name="Foo")
     assert dataset.name == "Foo"
     assert isinstance(dataset, DefaultOnlineDatasetPluginTest)
 
@@ -104,7 +140,7 @@ def test_from_keys_consistent_access():
 def test_register_plugin():
     with pytest.raises(ValueError) as execinfo:
 
-        @DatasetPlugin.register(constructor_keys={"name"}, context=Context.ONLINE)
+        @DatasetPlugin.register(context=Context.ONLINE, as_default_context_plugin=True)
         class FooPlugin(DatasetPlugin):
             def __init__(self, **kwargs):
                 super(FooPlugin, self).__init__(**kwargs)
@@ -113,16 +149,7 @@ def test_register_plugin():
 
     with pytest.raises(ValueError) as execinfo:
 
-        @DatasetPlugin.register(constructor_keys=None, context=Context.ONLINE)
-        class FooPlugin1(DatasetPlugin):
-            def __init__(self, **kwargs):
-                super(FooPlugin1, self).__init__(**kwargs)
-
-    assert "constructor_keys cannot be None" in str(execinfo.value)
-
-    with pytest.raises(ValueError) as execinfo:
-
-        @DatasetPlugin.register(constructor_keys={"name"}, context=None)
+        @DatasetPlugin.register(context=None)
         class FooPlugin2(DatasetPlugin):
             def __init__(self, **kwargs):
                 super(FooPlugin2, self).__init__(**kwargs)
@@ -131,7 +158,7 @@ def test_register_plugin():
 
     with pytest.raises(ValueError) as execinfo:
 
-        @DatasetPlugin.register(constructor_keys={"name"}, context=1)
+        @DatasetPlugin.register(context=1)
         class FooPlugin3(DatasetPlugin):
             def __init__(self, **kwargs):
                 super(FooPlugin3, self).__init__(**kwargs)
@@ -142,7 +169,7 @@ def test_register_plugin():
 def test_is_valid_dataset_name():
     bad_name = "ds-fee"
     with pytest.raises(ValueError) as exec_info:
-        DatasetPlugin.from_keys(name=bad_name)
+        Dataset(bad_name)
 
     assert f"'{bad_name}' is not a valid Dataset name.  Please use Upper Pascal Case syntax:" in str(
         exec_info.value

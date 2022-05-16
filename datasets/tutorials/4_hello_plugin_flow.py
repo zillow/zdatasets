@@ -19,7 +19,7 @@ DatasetPlugin.register_executor(executor=OnlineExecutor())
 
 
 class HelloPluginFlow(FlowSpec):
-    @dataset(name="HelloDataset")
+    @dataset("HelloDataset")
     @step
     def start(self):
         assert isinstance(self.hello_dataset, DefaultOnlineDatasetPlugin)

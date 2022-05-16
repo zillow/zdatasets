@@ -1,8 +1,8 @@
 import pandas as pd
 from metaflow import FlowSpec, Parameter, step
 
-from datasets import DatasetType, Mode
-from datasets.plugins import HiveDataset
+from datasets import Dataset, DatasetType, Mode
+from datasets.plugins import HiveDataset, HiveOptions
 
 
 # Can also invoke from CLI:
@@ -14,10 +14,9 @@ from datasets.plugins import HiveDataset
 class HiveDatasetFlow(FlowSpec):
     zpids_dataset: HiveDataset = Parameter(
         "zpids_dataset",
-        default=dict(
+        default=Dataset(
             name="ZpidsDataset",
-            is_hive_table=True,
-            partition_by="region,run_id",
+            options=HiveOptions(partition_by="region,run_id"),
             mode=Mode.READ_WRITE,
         ),
         type=DatasetType,

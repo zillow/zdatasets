@@ -7,11 +7,13 @@ from pandas._testing import assert_frame_equal
 from pyspark import pandas as ps
 from pyspark.sql import DataFrame as SparkDataFrame, SparkSession
 
-from datasets import Mode
-from datasets.context import Context
-from datasets.dataset_plugin import DatasetPlugin
+from datasets import Dataset, Mode
 from datasets.exceptions import InvalidOperationException
 from datasets.plugins import HiveDataset
+from datasets.plugins.batch.hive_dataset import (
+    HiveOptions,
+    _retry_with_backoff,
+)
 from datasets.tests.conftest import TestExecutor
 
 
@@ -37,14 +39,15 @@ def hive_table() -> str:
 
 @pytest.fixture
 def dataset(hive_table: str, partition_by: str, mode: Mode, columns: str):
-    return DatasetPlugin.from_keys(
+    return Dataset(
         name="Foo",
-        hive_table=hive_table,
-        context=Context.BATCH,
         logical_key="col1",
         columns=columns,
-        partition_by=partition_by,
         mode=mode,
+        options=HiveOptions(
+            partition_by=partition_by,
+            hive_table_name=hive_table,
+        ),
     )
 
 
@@ -58,22 +61,20 @@ def df() -> pd.DataFrame:
     return pd.DataFrame(data)
 
 
-def test_from_keys_offline_plugin(dataset: HiveDataset, hive_table: str):
+def test_dataset_factory_hive_plugin(dataset: HiveDataset, hive_table: str):
     assert dataset.name == "Foo"
     assert dataset.hive_table_name == hive_table
     assert dataset.key == "col1"
     assert dataset.partition_by == "col1,col3"
 
 
-def test_from_keys_is_hive_table(partition_by: str, mode: Mode, columns: str):
-    dataset = DatasetPlugin.from_keys(
+def test_dataset_factory_is_hive_table(partition_by: str, mode: Mode, columns: str):
+    dataset = Dataset(
         name="FooFoo",
-        is_hive_table=True,
-        context=Context.BATCH,
         logical_key="col1",
         columns=columns,
-        partition_by=partition_by,
         mode=mode,
+        options=HiveOptions(partition_by=partition_by),
     )
     assert dataset.name == "FooFoo"
     assert dataset.hive_table_name == "foo_foo"
@@ -81,20 +82,20 @@ def test_from_keys_is_hive_table(partition_by: str, mode: Mode, columns: str):
     assert dataset.partition_by == "col1,col3"
 
 
-def test_from_keys_hive_not_pascal(partition_by: str, mode: Mode, columns: str):
-    name = "foofoo"
+def test_dataset_factory_hive_not_pascal(partition_by: str, mode: Mode, columns: str):
+    bad_name = "foofoo"
     with pytest.raises(ValueError) as exec_info:
-        DatasetPlugin.from_keys(
-            name=name,
-            is_hive_table=True,
-            context=Context.BATCH,
+        Dataset(
+            name=bad_name,
             logical_key="col1",
             columns=columns,
-            partition_by=partition_by,
             mode=mode,
+            options=HiveOptions(partition_by=partition_by),
         )
 
-    assert f"{name=} is not upper pascal case." in str(exec_info.value)
+    assert f"'{bad_name}' is not a valid Dataset name.  Please use Upper Pascal Case syntax:" in str(
+        exec_info.value
+    )
 
 
 @pytest.mark.parametrize("mode", [Mode.WRITE])
@@ -242,6 +243,15 @@ def test_write_unsupported_data_frame(dataset: HiveDataset, df: pd.DataFrame):
     assert "data is of unsupported type" in str(exec_info.value)
 
 
+def test_write_invalid_column_name(dataset: HiveDataset, df: pd.DataFrame):
+    column_name = "bad:name"
+    df[column_name] = 1
+    with pytest.raises(ValueError) as exec_info:
+        dataset.write(df)
+
+    assert f"{column_name} is not alphanum or underscore!" in str(exec_info.value)
+
+
 @pytest.mark.spark
 @pytest.mark.parametrize("mode", [Mode.READ])
 def test_write_on_read_only_spark_data_frame(dataset: HiveDataset, df: pd.DataFrame):
@@ -278,3 +288,34 @@ def test_write_on_read_only_spark_pandas(dataset: HiveDataset):
     df = pd.DataFrame({"col1": ["A", "A", "A", "B", "B", "B"], "col2": [1, 2, 3, 4, 5, 6]})
     with pytest.raises(InvalidOperationException):
         dataset.write(ps.from_pandas(df))
+
+
+i = 0
+
+
+def test_retry_with_back_off():
+    def happy_path():
+        return ":)"
+
+    assert _retry_with_backoff(happy_path) == ":)"
+
+    def semi_happy_path():
+        global i
+        i += 1
+        if i < 2:
+            raise Exception(":|")
+        else:
+            print(f"...: {i=}")
+            return ":|"
+
+    assert _retry_with_backoff(semi_happy_path, backoff_in_seconds=0) == ":|"
+    print(f"{i=}")
+    assert i == 2
+
+    def un_happy_path():
+        raise Exception(":(")
+
+    with pytest.raises(Exception) as exec_info:
+        _retry_with_backoff(un_happy_path, retries=1, backoff_in_seconds=0)
+
+    assert ":(" in str(exec_info.value)

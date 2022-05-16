@@ -1,6 +1,7 @@
 import logging
 import random
 import time
+from dataclasses import dataclass
 from functools import partial
 from typing import TYPE_CHECKING, Callable, List, Optional, Union
 
@@ -11,7 +12,10 @@ from datasets._typing import ColumnNames
 from datasets.context import Context
 from datasets.dataset_plugin import DatasetPlugin
 from datasets.exceptions import InvalidOperationException
-from datasets.plugins.batch.batch_base_plugin import BatchBasePlugin
+from datasets.plugins.batch.batch_base_plugin import (
+    BatchBasePlugin,
+    BatchOptions,
+)
 from datasets.utils.case_utils import (
     is_upper_pascal_case,
     snake_case_to_pascal,
@@ -26,32 +30,34 @@ if TYPE_CHECKING:
     from pyspark.sql import DataFrame as SparkDataFrame, SparkSession
 
 
-@DatasetPlugin.register(constructor_keys={"is_hive_table", "hive_table"}, context=Context.BATCH)
+@dataclass
+class HiveOptions(BatchOptions):
+    pass
+
+
+@DatasetPlugin.register(context=Context.BATCH, options=HiveOptions, as_default_context_plugin=True)
 class HiveDataset(BatchBasePlugin):
     def __init__(
         self,
         name: Optional[str] = None,
-        is_hive_table: Optional[bool] = None,
-        hive_table: Optional[str] = None,
         logical_key: Optional[str] = None,
         columns: Optional[ColumnNames] = None,
         run_id: Optional[str] = None,
         run_time: Optional[int] = None,
         mode: Mode = Mode.READ,
-        partition_by: Optional[ColumnNames] = None,
+        options: Optional[HiveOptions] = None,
     ):
-        if is_hive_table and hive_table is None and not is_upper_pascal_case(name):
+        if options and options.hive_table_name is None and not is_upper_pascal_case(name):
             raise ValueError(f"{name=} is not upper pascal case.")
 
         super(HiveDataset, self).__init__(
-            name=name if name else snake_case_to_pascal(hive_table),
-            hive_table_name=hive_table,
+            name=name if name else snake_case_to_pascal(options.hive_table_name),
             logical_key=logical_key,
             columns=columns,
             run_id=run_id,
             run_time=run_time,
             mode=mode,
-            partition_by=partition_by,
+            options=options,
         )
 
     def to_spark_pandas(

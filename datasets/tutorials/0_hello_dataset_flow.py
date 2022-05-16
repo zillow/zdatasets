@@ -1,8 +1,9 @@
 import pandas as pd
 from metaflow import FlowSpec, Parameter, step
 
-from datasets import DatasetType, Mode
+from datasets import Dataset, DatasetType, Mode
 from datasets.plugins import BatchDataset
+from datasets.plugins.batch.batch_base_plugin import BatchOptions
 
 
 # Can also invoke from CLI:
@@ -11,7 +12,7 @@ from datasets.plugins import BatchDataset
 class HelloDatasetFlow(FlowSpec):
     hello_dataset: BatchDataset = Parameter(
         "hello_dataset",
-        default=dict(name="HelloDataset", partition_by="region", mode=Mode.READ_WRITE),
+        default=Dataset("HelloDataset", mode=Mode.READ_WRITE, options=BatchOptions(partition_by="region")),
         type=DatasetType,
     )
 
@@ -21,7 +22,6 @@ class HelloDatasetFlow(FlowSpec):
         print("saving data_frame: \n", df.to_string(index=False))
 
         # Example of writing to a dataset
-        print(f"{self.hello_dataset.program_name=}")
         self.hello_dataset.write(df)
 
         # save this as an output dataset
