@@ -1,11 +1,12 @@
 import os
 
 import pandas as pd
-from metaflow import FlowSpec, Parameter, step
+from metaflow import FlowSpec, step
 
-from datasets import Dataset, DatasetType, Mode
+from datasets import Dataset, Mode
 from datasets.context import Context
 from datasets.dataset_plugin import DatasetPlugin
+from datasets.metaflow import DatasetParameter
 from datasets.plugins import BatchDataset, MetaflowExecutor
 from datasets.plugins.batch.batch_base_plugin import BatchOptions
 from datasets.tutorials.online_plugin import (
@@ -24,21 +25,19 @@ class PortableExecutor(MetaflowExecutor):
 DatasetPlugin.register_executor(executor=PortableExecutor())
 
 
-# flake8: noqa: E501
 # Can also invoke from CLI:
 class ConsistentFlow(FlowSpec):
     """
     see README.ipynb for a tutorial usage
     """
 
-    hello_ds = Parameter(
+    hello_ds = DatasetParameter(
         name="hello_ds",
-        type=DatasetType,
         default=Dataset(
             name="HelloDs",
             columns="key,value",
             mode=Mode.READ_WRITE,
-            options={
+            options_by_context={
                 Context.BATCH: BatchOptions,
                 Context.ONLINE: OnlineOptions,
             },

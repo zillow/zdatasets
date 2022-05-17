@@ -70,11 +70,12 @@ Thumbs.db
 *.pydevproject*
 *.settings
 .idea/
+.vscode/
 
 # Code Coverage #
 #################
 coverage/
-.coverage
+.coverage*
 nosetests.xml
 coverage.xml
 log/

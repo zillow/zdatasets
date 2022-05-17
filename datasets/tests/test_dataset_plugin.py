@@ -111,12 +111,12 @@ def test_dataset_factory_constructor_unhappy():
         Dataset("FooName", options=options)
     assert f"{type(options)=} not in" in str(exec_info.value)
 
-    options = {Context.ONLINE: options}
+    options_by_context = {Context.ONLINE: options}
     with pytest.raises(ValueError) as exec_info:
-        Dataset("FooName", options=options)
+        Dataset("FooName", options_by_context=options_by_context)
 
     context_lookup = Context.BATCH
-    assert f"{context_lookup=} not in {options.keys=}" in str(exec_info.value)
+    assert f"{context_lookup=} not in {options_by_context=}" in str(exec_info.value)
 
 
 def test_dataset_factory_consistent_access():

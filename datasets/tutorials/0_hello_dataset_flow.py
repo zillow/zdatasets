@@ -1,7 +1,8 @@
 import pandas as pd
-from metaflow import FlowSpec, Parameter, step
+from metaflow import FlowSpec, step
 
-from datasets import Dataset, DatasetType, Mode
+from datasets import Dataset, Mode
+from datasets.metaflow import DatasetParameter
 from datasets.plugins import BatchDataset
 from datasets.plugins.batch.batch_base_plugin import BatchOptions
 
@@ -10,10 +11,9 @@ from datasets.plugins.batch.batch_base_plugin import BatchOptions
 #  > python datasets/tutorials/0_hello_dataset_flow.py run \
 #    --hello_dataset '{"name": "HelloDataset", "partition_by": "region", "mode": "READ_WRITE"}'
 class HelloDatasetFlow(FlowSpec):
-    hello_dataset: BatchDataset = Parameter(
+    hello_dataset: BatchDataset = DatasetParameter(
         "hello_dataset",
         default=Dataset("HelloDataset", mode=Mode.READ_WRITE, options=BatchOptions(partition_by="region")),
-        type=DatasetType,
     )
 
     @step

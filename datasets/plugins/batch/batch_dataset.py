@@ -6,7 +6,7 @@ import pandas as pd
 from datasets import Mode
 from datasets._typing import ColumnNames, DataFrameType
 from datasets.context import Context
-from datasets.dataset_plugin import DatasetPlugin, dataset_name_validator
+from datasets.dataset_plugin import DatasetPlugin
 from datasets.exceptions import InvalidOperationException
 from datasets.plugins.batch.batch_base_plugin import (
     BatchBasePlugin,
@@ -39,7 +39,7 @@ class BatchDataset(BatchBasePlugin):
         mode: Mode = Mode.READ,
         options: Optional[BatchOptions] = BatchOptions(),
     ):
-        dataset_name_validator(name)
+        DatasetPlugin._dataset_name_validator(name)
         super(BatchDataset, self).__init__(
             name=name,
             logical_key=logical_key,
@@ -221,7 +221,7 @@ class BatchDataset(BatchBasePlugin):
     def write_pandas(self, df: pd.DataFrame, partition_by: Optional[ColumnNames] = None, **kwargs):
         df, partition_cols = self._path_write_data_frame_prep(df, partition_by=partition_by)
         self._path = self._get_dataset_path()
-        print(f"write_pandas({self._path=}, {partition_cols=})")
+        _logger.info(f"write_pandas({self._path=}, {partition_cols=})")
         df.to_parquet(
             self._path,
             engine=kwargs.get("engine", "pyarrow"),

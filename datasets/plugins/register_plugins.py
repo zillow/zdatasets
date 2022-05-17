@@ -16,3 +16,6 @@ def register():
         executor = entry.load()
         if not isinstance(executor, type(MetaflowExecutor)):
             DatasetPlugin.register_executor(executor=executor)
+
+    DatasetPlugin.register_plugin_factory(DatasetPlugin.default_plugin_factory)
+    DatasetPlugin.register_dataset_name_validator(DatasetPlugin.validate_dataset_name)

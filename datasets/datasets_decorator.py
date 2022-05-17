@@ -15,7 +15,8 @@ def dataset(
     run_id: Optional[str] = None,
     run_time: Optional[int] = None,
     mode: Union[Mode, str] = Mode.READ,
-    options: Optional[Union[StorageOptions, Dict[Context, StorageOptions]]] = None,
+    options: Optional[StorageOptions] = None,
+    options_by_context: Optional[Dict[Context, StorageOptions]] = None,
     context: Optional[Union[Context, str]] = None,
     field_name: Optional[str] = None,
     **dataset_kwargs,
@@ -32,6 +33,7 @@ def dataset(
                 run_time=run_time,
                 mode=mode,
                 options=options,
+                options_by_context=options_by_context,
                 context=context,
                 **dataset_kwargs,
             )

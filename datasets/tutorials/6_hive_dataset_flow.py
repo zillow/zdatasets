@@ -1,7 +1,8 @@
 import pandas as pd
-from metaflow import FlowSpec, Parameter, step
+from metaflow import FlowSpec, step
 
-from datasets import Dataset, DatasetType, Mode
+from datasets import Dataset, Mode
+from datasets.metaflow import DatasetParameter
 from datasets.plugins import HiveDataset, HiveOptions
 
 
@@ -12,14 +13,13 @@ from datasets.plugins import HiveDataset, HiveOptions
 
 
 class HiveDatasetFlow(FlowSpec):
-    zpids_dataset: HiveDataset = Parameter(
+    zpids_dataset: HiveDataset = DatasetParameter(
         "zpids_dataset",
         default=Dataset(
             name="ZpidsDataset",
             options=HiveOptions(partition_by="region,run_id"),
             mode=Mode.READ_WRITE,
         ),
-        type=DatasetType,
     )
 
     @step
@@ -28,14 +28,12 @@ class HiveDatasetFlow(FlowSpec):
         print("saving data_frame: \n", df.to_string(index=False))
 
         # Example of writing to a dataset
-        print(f"{self.zpids_dataset.program_name=}")
         self.zpids_dataset.write(df)
 
         # save this as an output dataset
-        self.output_dataset = self.zpids_dataset
+        self.output_dataset: HiveDataset = self.zpids_dataset
         read_df: pd.DataFrame = self.output_dataset.to_spark_pandas(partitions=dict(region="A")).to_pandas()
-        print('self.output_dataset.to_pandas(partitions=dict(region="A")):')
-        print(read_df.to_string(index=False))
+        print(f"{read_df.to_string(index=False)=}")
 
         self.next(self.end)
 
