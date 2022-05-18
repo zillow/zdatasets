@@ -1,4 +1,3 @@
-from dataclasses import dataclass
 from typing import TYPE_CHECKING, Optional, Tuple, Union
 
 from datasets._typing import ColumnNames
@@ -12,7 +11,6 @@ if TYPE_CHECKING:
     from metaflow import Run
 
 
-@dataclass
 class FlowOptions(StorageOptions):
     flow_dataset: str
 

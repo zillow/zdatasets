@@ -1,6 +1,5 @@
 import logging
 import os
-from dataclasses import dataclass
 from pathlib import Path
 from typing import (
     TYPE_CHECKING,
@@ -26,7 +25,6 @@ if TYPE_CHECKING:
     from pyspark.sql import SparkSession
 
 
-@dataclass
 class BatchOptions(StorageOptions):
     partition_by: Optional[ColumnNames] = None
     path: Optional[Union[str, Path]] = None

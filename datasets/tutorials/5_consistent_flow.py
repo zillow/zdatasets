@@ -7,8 +7,7 @@ from datasets import Dataset, Mode
 from datasets.context import Context
 from datasets.dataset_plugin import DatasetPlugin
 from datasets.metaflow import DatasetParameter
-from datasets.plugins import BatchDataset, MetaflowExecutor
-from datasets.plugins.batch.batch_base_plugin import BatchOptions
+from datasets.plugins import BatchDataset, BatchOptions, MetaflowExecutor
 from datasets.tutorials.online_plugin import (
     DefaultOnlineDatasetPlugin,
     OnlineOptions,

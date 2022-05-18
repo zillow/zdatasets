@@ -1,7 +1,6 @@
 import logging
 import random
 import time
-from dataclasses import dataclass
 from functools import partial
 from typing import TYPE_CHECKING, Callable, List, Optional, Union
 
@@ -30,7 +29,6 @@ if TYPE_CHECKING:
     from pyspark.sql import DataFrame as SparkDataFrame, SparkSession
 
 
-@dataclass
 class HiveOptions(BatchOptions):
     pass
 

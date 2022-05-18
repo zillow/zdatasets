@@ -41,7 +41,7 @@ class ForeachDatasetFlow(FlowSpec):
 
     @step
     def join_step(self, inputs):
-        self.merge_artifacts(inputs, include=["my_dataset"])
+        self.my_dataset = inputs[0].my_dataset
         self.next(self.end)
 
     @step

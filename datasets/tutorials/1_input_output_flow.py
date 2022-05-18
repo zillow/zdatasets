@@ -2,12 +2,11 @@ import pandas as pd
 from metaflow import Flow, FlowSpec, step
 
 from datasets import Mode, dataset
-from datasets.plugins import BatchOptions
-from datasets.plugins.batch.flow_dataset import FlowOptions
+from datasets.plugins import BatchOptions, FlowOptions
 
 
 class InputOutputDatasetFlow(FlowSpec):
-    @dataset("HelloDataset", options=FlowOptions("HelloDatasetFlow.output_dataset"))
+    @dataset("HelloDataset", options=FlowOptions(flow_dataset="HelloDatasetFlow.output_dataset"))
     @dataset("OutputDataset", options=BatchOptions(partition_by="date_key,region"), mode=Mode.READ_WRITE)
     @step
     def start(self):

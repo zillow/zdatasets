@@ -1,5 +1,3 @@
-from dataclasses import dataclass
-
 import pandas as pd
 import pytest
 
@@ -22,7 +20,6 @@ class DefaultOnlineDatasetPluginTest(DatasetPlugin):
         super(DefaultOnlineDatasetPluginTest, self).__init__(**kwargs)
 
 
-@dataclass
 class DatasetTestOptions(StorageOptions):
     a: str
 
@@ -42,7 +39,6 @@ class DatasetPluginTest(DatasetPlugin):
         return self.db[self.db.key.isin(key)]
 
 
-@dataclass
 class DatasetTestOptions2(StorageOptions):
     a: str
     b: str
@@ -55,7 +51,6 @@ class DatasetPluginTest2(DatasetPlugin):
         super(DatasetPluginTest2, self).__init__(name=name, options=options, **kwargs)
 
 
-@dataclass
 class FeeOnlineDatasetOptions(StorageOptions):
     test_fee: str
 
@@ -85,7 +80,7 @@ def test_dataset_factory_constructor():
     assert isinstance(dataset, HiveDataset)
     assert dataset.name == "FooName"
 
-    dataset = Dataset("FooName", options=DatasetTestOptions("Foo"))
+    dataset = Dataset("FooName", options=DatasetTestOptions(a="Foo"))
     assert dataset.name == "FooName"
     assert dataset.a == "Foo"
     assert dataset.to_pandas(["first", "fourth"])["value"].to_list() == [1, 4]

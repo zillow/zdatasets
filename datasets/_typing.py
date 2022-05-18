@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Iterable, Union
+from typing import TYPE_CHECKING, Iterable, List, Union
 
 import pandas as pd
 
@@ -9,5 +9,5 @@ if TYPE_CHECKING:
     from pyspark.sql import DataFrame as SparkDataFrame, SparkSession
 
 
-ColumnNames = Union[str, Iterable[str]]
+ColumnNames = Union[str, List[str]]
 DataFrameType = Union[pd.DataFrame, "dd.DataFrame", "SparkDataFrame"]  # flake8: noqa: F821

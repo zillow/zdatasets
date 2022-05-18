@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass
 from typing import Callable, Dict, Iterable, Optional, Tuple, Union
+
+import pydantic
 
 from datasets._typing import ColumnNames
 from datasets.context import Context
@@ -16,9 +17,8 @@ _logger = logging.getLogger(__name__)
 _logger.setLevel(logging.DEBUG)
 
 
-@dataclass
-class StorageOptions:
-    pass
+class StorageOptions(pydantic.BaseModel):
+    _type: Optional[str] = None
 
 
 DatasetPluginFactory = Callable[
@@ -69,18 +69,6 @@ class DatasetPlugin:
         self.run_id = run_id
         self.run_time = run_time
         self.options = options
-
-    # @dataclass
-    # class DatasetParameters:
-    #     name: Optional[str] = None
-    #     logical_key: Optional[str] = None
-    #     columns: Optional[ColumnNames] = None
-    #     run_id: Optional[str] = None
-    #     run_time: Optional[int] = None
-    #     mode: Union[Mode, str] = Mode.READ
-    #     options: Optional[StorageOptions] = (None,)
-    #     options_by_context: Optional[Dict[Context, StorageOptions]] = (None,)
-    #     context: Optional[Union[Context, str]] = None
 
     @classmethod
     def Dataset(
