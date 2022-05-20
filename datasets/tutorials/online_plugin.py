@@ -9,14 +9,16 @@ from datasets.dataset_plugin import StorageOptions
 
 
 class OnlineOptions(StorageOptions):
-    pass
+    keys: Optional[str] = None
 
 
-@DatasetPlugin.register(context=Context.ONLINE, options=OnlineOptions, as_default_context_plugin=True)
+@DatasetPlugin.register(context=Context.ONLINE, options_type=OnlineOptions, as_default_context_plugin=True)
 class DefaultOnlineDatasetPlugin(DatasetPlugin):
-    def __init__(self, keys: Optional[Union[List[str], str]] = None, **kwargs):
-        if isinstance(keys, str):
-            self.keys = keys.split(",")
+    def __init__(
+        self, keys: Optional[Union[List[str], str]] = None, options: Optional[OnlineOptions] = None, **kwargs
+    ):
+        if options and options.keys:
+            self.keys = options.keys.split(",")
         else:
             self.keys = keys
 

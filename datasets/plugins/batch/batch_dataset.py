@@ -23,7 +23,7 @@ if TYPE_CHECKING:
     from pyspark.sql import DataFrame as SparkDataFrame
 
 
-@DatasetPlugin.register(context=Context.BATCH, options=BatchOptions)
+@DatasetPlugin.register(context=Context.BATCH, options_type=BatchOptions)
 class BatchDataset(BatchBasePlugin):
     """
     The default plugin for the BATCH execution context.

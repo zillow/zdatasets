@@ -1,9 +1,12 @@
+from typing import Optional
+
 import pandas as pd
 import pytest
 
 from datasets import Dataset
 from datasets.context import Context
 from datasets.dataset_plugin import DatasetPlugin, StorageOptions
+from datasets.metaflow import _DatasetTypeClass
 from datasets.plugins import HiveDataset
 from datasets.tests.conftest import TestExecutor
 
@@ -24,7 +27,7 @@ class DatasetTestOptions(StorageOptions):
     a: str
 
 
-@DatasetPlugin.register(context=Context.BATCH, options=DatasetTestOptions)
+@DatasetPlugin.register(context=Context.BATCH, options_type=DatasetTestOptions)
 class DatasetPluginTest(DatasetPlugin):
     db = pd.DataFrame(
         {"key": ["first", "second", "third", "fourth"], "value": [1, 2, 3, 4]},
@@ -40,11 +43,11 @@ class DatasetPluginTest(DatasetPlugin):
 
 
 class DatasetTestOptions2(StorageOptions):
-    a: str
-    b: str
+    a: Optional[str] = None
+    b: Optional[str] = None
 
 
-@DatasetPlugin.register(context=Context.BATCH, options=DatasetTestOptions2)
+@DatasetPlugin.register(context=Context.BATCH, options_type=DatasetTestOptions2)
 class DatasetPluginTest2(DatasetPlugin):
     def __init__(self, name: str, options: DatasetTestOptions2, **kwargs):
         self.c = f"{options.a}{options.b}"
@@ -55,7 +58,7 @@ class FeeOnlineDatasetOptions(StorageOptions):
     test_fee: str
 
 
-@DatasetPlugin.register(context=Context.ONLINE | Context.STREAMING, options=FeeOnlineDatasetOptions)
+@DatasetPlugin.register(context=Context.ONLINE | Context.STREAMING, options_type=FeeOnlineDatasetOptions)
 class FeeOnlineDatasetPluginTest(DatasetPlugin):
     def __init__(self, name: str, options: FeeOnlineDatasetOptions, **kwargs):
         self.test_fee = options.test_fee
@@ -97,6 +100,36 @@ def test_dataset_factory_constructor():
     assert isinstance(dataset, FeeOnlineDatasetPluginTest)
 
 
+def test_dataset_json_constructor():
+    dataset = _DatasetTypeClass().convert('{"name": "FooName"}', None, None)
+    assert isinstance(dataset, HiveDataset)
+    assert dataset.name == "FooName"
+
+    dataset = _DatasetTypeClass().convert(
+        '{"name": "FooName", "options":{"type": "DatasetTestOptions", "a": "Foo"}}', None, None
+    )
+    assert dataset.name == "FooName"
+    assert dataset.a == "Foo"
+    assert dataset.to_pandas(["first", "fourth"])["value"].to_list() == [1, 4]
+    assert isinstance(dataset, DatasetPluginTest)
+
+    dataset = _DatasetTypeClass().convert(
+        '{"name": "Tata", "options":{"type": "DatasetTestOptions2", "a": "Ta", "b":"Tb"}}', None, None
+    )
+    assert dataset.name == "Tata"
+    assert dataset.c == "TaTb"
+    assert isinstance(dataset, DatasetPluginTest2)
+
+    dataset = _DatasetTypeClass().convert(
+        '{"name": "TestFee", "context":"ONLINE", "options":{"type": "FeeOnlineDatasetOptions", "test_fee": "TestFee"}}',
+        None,
+        None,
+    )
+    assert dataset.name == "TestFee"
+    assert dataset.test_fee == "TestFee"
+    assert isinstance(dataset, FeeOnlineDatasetPluginTest)
+
+
 def test_dataset_factory_constructor_unhappy():
     class UnHappyOptions(StorageOptions):
         pass
@@ -126,6 +159,43 @@ def test_dataset_factory_consistent_access():
 
     TestExecutor.current_context = Context.ONLINE
     dataset = Dataset(name="Foo")
+    assert dataset.name == "Foo"
+    assert isinstance(dataset, DefaultOnlineDatasetPluginTest)
+
+    dataset = Dataset(
+        name="Foo",
+        options_by_context={
+            Context.BATCH: DatasetTestOptions(a="boo"),
+            Context.ONLINE: DatasetTestOptions2(),
+        },
+    )
+    assert dataset.name == "Foo"
+    assert isinstance(dataset, DatasetPluginTest2)
+
+    TestExecutor.current_context = Context.BATCH
+
+    dataset = Dataset(
+        name="Foo",
+        options_by_context={
+            Context.BATCH: DatasetTestOptions(a="boo"),
+            Context.ONLINE: DatasetTestOptions2(),
+        },
+    )
+    assert dataset.name == "Foo"
+    assert isinstance(dataset, DatasetPluginTest)
+
+
+def test_json_consistent_access():
+    dataset = _DatasetTypeClass().convert('{"name": "Foo"}', None, None)
+    assert dataset.name == "Foo"
+
+    TestExecutor.current_context = Context.STREAMING
+    dataset = _DatasetTypeClass().convert('{"name": "Foo"}', None, None)
+    assert dataset.name == "Foo"
+    assert isinstance(dataset, DefaultStreamingDatasetPluginTest)
+
+    TestExecutor.current_context = Context.ONLINE
+    dataset = _DatasetTypeClass().convert('{"name": "Foo"}', None, None)
     assert dataset.name == "Foo"
     assert isinstance(dataset, DefaultOnlineDatasetPluginTest)
 

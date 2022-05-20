@@ -33,7 +33,7 @@ class HiveOptions(BatchOptions):
     pass
 
 
-@DatasetPlugin.register(context=Context.BATCH, options=HiveOptions, as_default_context_plugin=True)
+@DatasetPlugin.register(context=Context.BATCH, options_type=HiveOptions, as_default_context_plugin=True)
 class HiveDataset(BatchBasePlugin):
     def __init__(
         self,

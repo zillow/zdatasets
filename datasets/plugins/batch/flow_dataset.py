@@ -15,7 +15,7 @@ class FlowOptions(StorageOptions):
     flow_dataset: str
 
 
-@DatasetPlugin.register(options=FlowOptions, context=Context.BATCH)
+@DatasetPlugin.register(options_type=FlowOptions, context=Context.BATCH)
 class FlowDataset(BatchDataset):
     def __init__(
         self,

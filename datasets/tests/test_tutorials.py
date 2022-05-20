@@ -33,24 +33,17 @@ def test_hello_plugin_flow():
 
 def test_consistent_flow():
     run_flow("tutorials/5_consistent_flow.py")
+    run_flow(
+        "tutorials/5_consistent_flow.py",
+        [
+            "--hello_ds",
+            '{"name": "HelloDs", "mode": "WRITE", "columns": "value", "options":{"type":"OnlineOptions"}}',
+        ],
+    )
     run_flow("tutorials/5_consistent_flow.py", context="ONLINE")
     run_flow(
         "tutorials/5_consistent_flow.py",
-        ["--hello_ds", '{"name": "HelloDs", "mode": "WRITE", "columns": "value"}'],
-    )
-    run_flow(
-        "tutorials/5_consistent_flow.py",
-        ["--hello_ds", '{"name": "HelloDs", "mode": "WRITE", "columns": "value"}'],
-        context="ONLINE",
-    )
-    run_flow(
-        "tutorials/5_consistent_flow.py",
-        ["--hello_ds", '{"name": "HelloDs", "mode": "WRITE", "columns": "value"}'],
-        context="ONLINE",
-    )
-    run_flow(
-        "tutorials/5_consistent_flow.py",
-        ["--hello_ds", '{"name": "HelloDs", "mode": "WRITE", "keys": "secret"}'],  # TODO(talebz)
+        ["--hello_ds", '{"name": "HelloDs", "options":{"type":"OnlineOptions","keys":"first,second,third"}}'],
         context="ONLINE",
     )
 

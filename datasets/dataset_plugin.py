@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Callable, Dict, Iterable, Optional, Tuple, Union
+from typing import Callable, Dict, Iterable, Optional, Tuple, Type, Union
 
 import pydantic
 
@@ -34,7 +34,7 @@ class DatasetPlugin:
     """
 
     _executor: ProgramExecutor
-    _plugins: Dict[StorageOptions, Dataset] = {}
+    _plugins: Dict[Type[StorageOptions], Dataset] = {}
     _META_COLUMNS = ["run_id", "run_time"]
 
     _dataset_name_validator: Callable[[str]]
@@ -93,7 +93,7 @@ class DatasetPlugin:
         plugin: DatasetPlugin
         options: Optional[StorageOptions]
         plugin, options = cls._dataset_plugin_factory(
-            cls._plugins, context=context, options=options, options_by_context=options_by_context
+            context=context, options=options, options_by_context=options_by_context
         )
         return plugin(
             name=name,
@@ -116,7 +116,10 @@ class DatasetPlugin:
 
     @classmethod
     def _validate_register_parameters(
-        cls, context=Context.BATCH, options: Optional[StorageOptions] = None, as_default_context_plugin=False
+        cls,
+        context=Context.BATCH,
+        options_type: Optional[Type[StorageOptions]] = None,
+        as_default_context_plugin=False,
     ):
         if context is None:
             raise ValueError("context cannot be None!")
@@ -127,24 +130,24 @@ class DatasetPlugin:
         if as_default_context_plugin and context in cls._default_context_plugins:
             raise ValueError(f"{context=} already registered in {cls._default_context_plugins=}")
 
-        if options in cls._plugins:
-            raise ValueError(f"{options=} already registered in {cls._plugins=}")
+        if options_type in cls._plugins:
+            raise ValueError(f"{options_type=} already registered in {cls._plugins=}")
 
     @classmethod
     def register(
         cls,
         context=Context.BATCH,
-        options: Optional[StorageOptions] = None,
+        options_type: Optional[Type[StorageOptions]] = None,
         as_default_context_plugin: bool = False,
     ) -> Callable:
-        cls._validate_register_parameters(context, options, as_default_context_plugin)
+        cls._validate_register_parameters(context, options_type, as_default_context_plugin)
 
         def inner_wrapper(wrapped_class: DatasetPlugin) -> DatasetPlugin:
             if as_default_context_plugin:
                 cls._default_context_plugins[context] = wrapped_class
 
-            if options:
-                cls._plugins[options] = wrapped_class
+            if options_type:
+                cls._plugins[options_type] = wrapped_class
 
             return wrapped_class
 
@@ -157,7 +160,6 @@ class DatasetPlugin:
     @classmethod
     def default_plugin_factory(
         cls,
-        registered_plugins: Dict[StorageOptions, DatasetPlugin],
         context: Optional[Union[Context, str]] = None,
         options: Optional[StorageOptions] = None,
         options_by_context: Optional[Dict[Context, StorageOptions]] = None,
@@ -169,14 +171,14 @@ class DatasetPlugin:
         elif options and options_by_context:
             raise ValueError("Please set one of options or options_by_context, not both.")
         elif options:
-            if type(options) not in registered_plugins:
-                raise ValueError(f"{type(options)=} not in {registered_plugins=}")
-            return (registered_plugins[type(options)], options)
+            if type(options) not in cls._plugins:
+                raise ValueError(f"{type(options)=} not in {cls._plugins=}")
+            return (cls._plugins[type(options)], options)
         elif options_by_context:
             if context_lookup not in options_by_context:
                 raise ValueError(f"{context_lookup=} not in {options_by_context=}")
             context_options = options_by_context[context_lookup]
-            plugin = registered_plugins[context_options]
+            plugin = cls._plugins[type(context_options)]
             return (plugin, context_options)
         else:
             raise ValueError("Either options or options_by_context must be set")
