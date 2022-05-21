@@ -8,7 +8,7 @@ from datasets.mode import Mode
 from datasets.utils.case_utils import pascal_to_snake_case
 
 
-def dataset_attribute(
+def dataset(
     name: Optional[str] = None,
     logical_key: Optional[str] = None,
     columns: Optional[ColumnNames] = None,

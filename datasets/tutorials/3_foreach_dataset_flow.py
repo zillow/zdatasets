@@ -3,7 +3,7 @@ import os
 import pandas as pd  # type: ignore
 from metaflow import FlowSpec, step
 
-from datasets import Mode, dataset_attribute
+from datasets import Mode, dataset
 from datasets.plugins import BatchDataset, BatchOptions
 
 
@@ -17,7 +17,7 @@ class ForeachDatasetFlow(FlowSpec):
         self.regions = ["A", "B"]
         self.next(self.foreach_split, foreach="regions")
 
-    @dataset_attribute(
+    @dataset(
         name="MyDataset",
         options=BatchOptions(
             partition_by="region,run_id",

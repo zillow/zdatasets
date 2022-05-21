@@ -5,7 +5,7 @@ from datasets.dataset_plugin import DatasetPlugin
 
 
 from datasets.context import Context
-from datasets.datasets_decorator import dataset_attribute
+from datasets.datasets_decorator import dataset
 
 
 from datasets import plugins
