@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, Callable, List, Optional, Union
 
 import pandas as pd
 
-from datasets import Mode
+from datasets.mode import Mode
 from datasets._typing import ColumnNames
 from datasets.context import Context
 from datasets.dataset_plugin import DatasetPlugin
@@ -56,6 +56,19 @@ class HiveDataset(BatchBasePlugin):
             run_time=run_time,
             mode=mode,
             options=options,
+        )
+
+    def to_pandas(
+        self,
+        columns: Optional[str] = None,
+        run_id: Optional[str] = None,
+        run_time: Optional[int] = None,
+        conf: Optional["SparkConf"] = None,
+        partitions: Optional[dict] = None,
+        **kwargs,
+    ) -> "ps.DataFrame":
+        return self.to_spark_pandas(
+            columns=columns, run_id=run_id, run_time=run_time, conf=conf, partitions=partitions, **kwargs
         )
 
     def to_spark_pandas(

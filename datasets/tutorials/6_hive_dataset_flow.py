@@ -13,7 +13,7 @@ from datasets.plugins import HiveDataset, HiveOptions
 
 
 class HiveDatasetFlow(FlowSpec):
-    zpids_dataset: HiveDataset = DatasetParameter(
+    zpids_dataset = DatasetParameter(
         "zpids_dataset",
         default=Dataset(
             name="ZpidsDataset",

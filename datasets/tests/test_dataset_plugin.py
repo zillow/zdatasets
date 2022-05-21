@@ -3,22 +3,35 @@ from typing import Optional
 import pandas as pd
 import pytest
 
-from datasets import Dataset
-from datasets.context import Context
+from datasets import Dataset, DataFrameType, Context
 from datasets.dataset_plugin import DatasetPlugin, StorageOptions
 from datasets.metaflow import _DatasetTypeClass
 from datasets.plugins import HiveDataset
 from datasets.tests.conftest import TestExecutor
 
 
+class _TestPlugin(DatasetPlugin):
+    def write(self, data: DataFrameType, **kwargs):
+        raise NotImplementedError()
+
+    def to_pandas(
+        self,
+        columns: Optional[str] = None,
+        run_id: Optional[str] = None,
+        run_time: Optional[int] = None,
+        **kwargs,
+    ) -> DataFrameType:
+        raise NotImplementedError()
+
+
 @DatasetPlugin.register(context=Context.STREAMING, as_default_context_plugin=True)
-class DefaultStreamingDatasetPluginTest(DatasetPlugin):
+class DefaultStreamingDatasetPluginTest(_TestPlugin):
     def __init__(self, *args, **kwargs):
         super(DefaultStreamingDatasetPluginTest, self).__init__(*args, **kwargs)
 
 
 @DatasetPlugin.register(context=Context.ONLINE, as_default_context_plugin=True)
-class DefaultOnlineDatasetPluginTest(DatasetPlugin):
+class DefaultOnlineDatasetPluginTest(_TestPlugin):
     def __init__(self, **kwargs):
         super(DefaultOnlineDatasetPluginTest, self).__init__(**kwargs)
 
@@ -28,7 +41,7 @@ class DatasetTestOptions(StorageOptions):
 
 
 @DatasetPlugin.register(context=Context.BATCH, options_type=DatasetTestOptions)
-class DatasetPluginTest(DatasetPlugin):
+class DatasetPluginTest(_TestPlugin):
     db = pd.DataFrame(
         {"key": ["first", "second", "third", "fourth"], "value": [1, 2, 3, 4]},
     )
@@ -48,7 +61,7 @@ class DatasetTestOptions2(StorageOptions):
 
 
 @DatasetPlugin.register(context=Context.BATCH, options_type=DatasetTestOptions2)
-class DatasetPluginTest2(DatasetPlugin):
+class DatasetPluginTest2(_TestPlugin):
     def __init__(self, name: str, options: DatasetTestOptions2, **kwargs):
         self.c = f"{options.a}{options.b}"
         super(DatasetPluginTest2, self).__init__(name=name, options=options, **kwargs)
@@ -59,7 +72,7 @@ class FeeOnlineDatasetOptions(StorageOptions):
 
 
 @DatasetPlugin.register(context=Context.ONLINE | Context.STREAMING, options_type=FeeOnlineDatasetOptions)
-class FeeOnlineDatasetPluginTest(DatasetPlugin):
+class FeeOnlineDatasetPluginTest(_TestPlugin):
     def __init__(self, name: str, options: FeeOnlineDatasetOptions, **kwargs):
         self.test_fee = options.test_fee
         super(FeeOnlineDatasetPluginTest, self).__init__(name=name, options=options, **kwargs)

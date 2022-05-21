@@ -5,6 +5,7 @@ from typing import Dict, List, Optional, Type, Union
 import pydantic
 from metaflow._vendor.click import ParamType
 from metaflow.parameters import Parameter
+from datasets import DataFrameType
 
 from datasets._typing import ColumnNames
 from datasets.context import Context
@@ -15,13 +16,13 @@ from datasets.mode import Mode
 class _DatasetTypeClass(ParamType):
     name = "Dataset"
 
-    def convert(self, value, param, ctx):
+    def convert(self, value, param, ctx) -> DatasetPlugin:
         if isinstance(value, str):
             params: _PydanticDatasetParameters = _PydanticDatasetParameters.parse_raw(value)
             params_dict = params.__dict__.copy()
             if "context" in params_dict:
                 del params_dict["context"]
-            return DatasetPlugin.Dataset(
+            return DatasetPlugin.factory(
                 context=params.context if params.context else DatasetPlugin._executor.context, **params_dict
             )
         else:
@@ -81,15 +82,27 @@ class _PydanticDatasetParameters(pydantic.BaseModel):
         json_loads = functools.partial(json.loads, cls=_OptionsDecoder)
 
 
-class DatasetParameter(Parameter):
+class DatasetParameter(Parameter, DatasetPlugin):
     def __init__(
         self,
         name: str,
         default: Optional[DatasetPlugin] = None,
         required: Optional[bool] = False,
         help: Optional[str] = None,
-        **kwargs
+        **kwargs,
     ):
         super(DatasetParameter, self).__init__(
             name, required=required, help=help, default=default, type=_DatasetTypeClass(), **kwargs
         )
+
+    def write(self, data: DataFrameType, **kwargs):
+        raise NotImplementedError()
+
+    def to_pandas(
+        self,
+        columns: Optional[str] = None,
+        run_id: Optional[str] = None,
+        run_time: Optional[int] = None,
+        **kwargs,
+    ) -> DataFrameType:
+        raise NotImplementedError()

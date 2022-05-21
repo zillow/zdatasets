@@ -1,9 +1,9 @@
 from typing import TYPE_CHECKING, Optional, Tuple, Union
 
 from datasets._typing import ColumnNames
+from datasets.mode import Mode
 from datasets.context import Context
 from datasets.dataset_plugin import DatasetPlugin, StorageOptions
-from datasets.mode import Mode
 from datasets.plugins import BatchDataset
 
 

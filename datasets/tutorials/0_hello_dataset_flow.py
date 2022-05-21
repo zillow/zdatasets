@@ -3,7 +3,7 @@ from metaflow import FlowSpec, step
 
 from datasets import Dataset, Mode
 from datasets.metaflow import DatasetParameter
-from datasets.plugins import BatchDataset, BatchOptions
+from datasets.plugins import BatchOptions
 
 
 # Can also invoke from CLI:
@@ -11,7 +11,7 @@ from datasets.plugins import BatchDataset, BatchOptions
 #    --hello_dataset '{"name": "HelloDataset", "mode": "READ_WRITE", \
 #    "options": {"type": "BatchOptions", "partition_by": "region"}}'
 class HelloDatasetFlow(FlowSpec):
-    hello_dataset: BatchDataset = DatasetParameter(
+    hello_dataset = DatasetParameter(
         "hello_dataset",
         default=Dataset("HelloDataset", mode=Mode.READ_WRITE, options=BatchOptions(partition_by="region")),
     )

@@ -8,7 +8,7 @@ from datasets.mode import Mode
 from datasets.utils.case_utils import pascal_to_snake_case
 
 
-def dataset(
+def dataset_attribute(
     name: Optional[str] = None,
     logical_key: Optional[str] = None,
     columns: Optional[ColumnNames] = None,
@@ -25,7 +25,7 @@ def dataset(
         @functools.wraps(func)
         def step_wrapper(*args, **kwargs):
             self = args[0]
-            dataset = DatasetPlugin.Dataset(
+            dataset_plugin: DatasetPlugin = DatasetPlugin.factory(
                 name=name,
                 logical_key=logical_key,
                 columns=columns,
@@ -41,10 +41,10 @@ def dataset(
             if field_name:
                 if not field_name.isidentifier() or keyword.iskeyword(field_name):
                     raise ValueError(f"{field_name} is not a valid Python identifier")
-                setattr(self, field_name, dataset)
+                setattr(self, field_name, dataset_plugin)
             else:
-                _snake_name = pascal_to_snake_case(dataset.name)
-                setattr(self, _snake_name, dataset)
+                _snake_name = pascal_to_snake_case(dataset_plugin.name)
+                setattr(self, _snake_name, dataset_plugin)
 
             func(*args, **kwargs)
 

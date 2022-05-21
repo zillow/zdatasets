@@ -192,7 +192,7 @@ class BatchDataset(BatchBasePlugin):
     ) -> Tuple[DataFrameType, List[str]]:
         partition_cols: List[str] = self._partition_by_to_list(partition_by)
         if self.path is None:
-            # partition on run_id if @dataset(path="s3://..") is not given
+            # partition on run_id if Dataset(path="s3://..") is not given
             if "run_id" not in partition_cols:
                 partition_cols.append("run_id")
 

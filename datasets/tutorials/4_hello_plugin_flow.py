@@ -1,7 +1,7 @@
 import pandas as pd
 from metaflow import FlowSpec, step
 
-from datasets import dataset
+from datasets import dataset_attribute
 from datasets.context import Context
 from datasets.dataset_plugin import DatasetPlugin
 from datasets.plugins import MetaflowExecutor
@@ -19,7 +19,7 @@ DatasetPlugin.register_executor(executor=OnlineExecutor())
 
 
 class HelloPluginFlow(FlowSpec):
-    @dataset("HelloDataset")
+    @dataset_attribute("HelloDataset")
     @step
     def start(self):
         assert isinstance(self.hello_dataset, DefaultOnlineDatasetPlugin)

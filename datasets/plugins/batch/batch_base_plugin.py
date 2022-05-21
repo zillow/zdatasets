@@ -11,7 +11,7 @@ from typing import (
     Union,
 )
 
-from datasets import Mode
+from datasets.mode import Mode
 from datasets._typing import ColumnNames, DataFrameType
 from datasets.dataset_plugin import DatasetPlugin, StorageOptions
 from datasets.exceptions import InvalidOperationException

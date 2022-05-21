@@ -1,13 +1,14 @@
 from __future__ import annotations
+from abc import ABC, abstractmethod
 
 import logging
 from typing import Callable, Dict, Iterable, Optional, Tuple, Type, Union
 
 import pydantic
 
-from datasets._typing import ColumnNames
 from datasets.context import Context
 from datasets.utils.case_utils import is_upper_pascal_case
+from datasets._typing import ColumnNames, DataFrameType
 
 from .mode import Mode
 from .program_executor import ProgramExecutor
@@ -27,20 +28,21 @@ DatasetPluginFactory = Callable[
 ]
 
 
-class DatasetPlugin:
+class DatasetPlugin(ABC):
     """
     All dataset plugins derive from this class.
     To register as a dataset they must decorate themselves with or call Dataset.register()
     """
 
     _executor: ProgramExecutor
-    _plugins: Dict[Type[StorageOptions], Dataset] = {}
+    _plugins: Dict[Type[StorageOptions], DatasetPlugin] = {}
     _META_COLUMNS = ["run_id", "run_time"]
 
-    _dataset_name_validator: Callable[[str]]
+    _dataset_name_validator: Callable[[str], None]
     _dataset_plugin_factory: DatasetPluginFactory
     _default_context_plugins: Dict[Context, DatasetPlugin] = {}
 
+    @abstractmethod
     def __init__(
         self,
         name: str,
@@ -70,8 +72,22 @@ class DatasetPlugin:
         self.run_time = run_time
         self.options = options
 
+    @abstractmethod
+    def write(self, data: DataFrameType, **kwargs):
+        pass
+
+    @abstractmethod
+    def to_pandas(
+        self,
+        columns: Optional[str] = None,
+        run_id: Optional[str] = None,
+        run_time: Optional[int] = None,
+        **kwargs,
+    ) -> DataFrameType:
+        pass
+
     @classmethod
-    def Dataset(
+    def factory(
         cls,
         name: Optional[str] = None,
         logical_key: Optional[str] = None,

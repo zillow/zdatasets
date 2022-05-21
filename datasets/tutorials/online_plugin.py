@@ -3,9 +3,8 @@ from typing import List, Optional, Union
 
 import pandas as pd
 
-from datasets import DatasetPlugin
+from datasets.dataset_plugin import DatasetPlugin, StorageOptions
 from datasets.context import Context
-from datasets.dataset_plugin import StorageOptions
 
 
 class OnlineOptions(StorageOptions):

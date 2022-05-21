@@ -1,12 +1,12 @@
 from dask.dataframe import DataFrame
 from metaflow import FlowSpec, step
 
-from datasets import dataset
+from datasets import dataset_attribute
 from datasets.plugins import FlowOptions
 
 
 class SparkDaskFlow(FlowSpec):
-    @dataset(
+    @dataset_attribute(
         field_name="io_dataset", options=FlowOptions(flow_dataset="InputOutputDatasetFlow.output_dataset")
     )
     @step
