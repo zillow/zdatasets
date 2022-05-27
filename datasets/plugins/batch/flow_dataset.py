@@ -12,7 +12,7 @@ if TYPE_CHECKING:
     from metaflow import Run
 
 
-@dataclass  
+@dataclass
 class FlowOptions(StorageOptions):
     flow_dataset: str
 
