@@ -255,7 +255,7 @@ def _retry_with_backoff(func: Callable, retries=5, backoff_in_seconds=1):
                 raise
             else:
                 i += 1
-                sleep = backoff_in_seconds * 2 ** i + random.uniform(0, 5)
+                sleep = backoff_in_seconds * 2**i + random.uniform(0, 5)
                 print(e)
                 print(f"  Retry after {sleep} seconds")
                 time.sleep(sleep)
