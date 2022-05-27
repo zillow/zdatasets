@@ -1,12 +1,14 @@
+from dataclasses import dataclass
 from typing import Optional
 
 import pandas as pd
 import pytest
 
-from datasets import Dataset, DataFrameType, Context
+from datasets import Context, DataFrameType, Dataset
 from datasets.dataset_plugin import DatasetPlugin, StorageOptions
 from datasets.metaflow import _DatasetTypeClass
 from datasets.plugins import HiveDataset
+from datasets.plugins.batch.hive_dataset import HiveOptions
 from datasets.tests.conftest import TestExecutor
 
 
@@ -36,6 +38,7 @@ class DefaultOnlineDatasetPluginTest(_TestPlugin):
         super(DefaultOnlineDatasetPluginTest, self).__init__(**kwargs)
 
 
+@dataclass
 class DatasetTestOptions(StorageOptions):
     a: str
 
@@ -55,6 +58,7 @@ class DatasetPluginTest(_TestPlugin):
         return self.db[self.db.key.isin(key)]
 
 
+@dataclass
 class DatasetTestOptions2(StorageOptions):
     a: Optional[str] = None
     b: Optional[str] = None
@@ -67,6 +71,7 @@ class DatasetPluginTest2(_TestPlugin):
         super(DatasetPluginTest2, self).__init__(name=name, options=options, **kwargs)
 
 
+@dataclass
 class FeeOnlineDatasetOptions(StorageOptions):
     test_fee: str
 
@@ -95,6 +100,11 @@ def test_dataset_factory_constructor():
     dataset = Dataset("FooName")
     assert isinstance(dataset, HiveDataset)
     assert dataset.name == "FooName"
+
+    dataset = Dataset("FooName", options=HiveOptions(path="test_path"))
+    assert isinstance(dataset, HiveDataset)
+    assert dataset.name == "FooName"
+    assert dataset.options.path == "test_path"
 
     dataset = Dataset("FooName", options=DatasetTestOptions(a="Foo"))
     assert dataset.name == "FooName"
@@ -144,6 +154,7 @@ def test_dataset_json_constructor():
 
 
 def test_dataset_factory_constructor_unhappy():
+    @dataclass
     class UnHappyOptions(StorageOptions):
         pass
 

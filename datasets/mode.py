@@ -14,3 +14,6 @@ class Mode(Flag):
         return self.name
 
     __repr__ = __str__
+
+    def to_json(self):
+        return str(self)

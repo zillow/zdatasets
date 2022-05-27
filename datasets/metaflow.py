@@ -1,12 +1,12 @@
-import functools
+import dataclasses
 import json
+from dataclasses import dataclass
 from typing import Dict, List, Optional, Type, Union
 
-import pydantic
 from metaflow._vendor.click import ParamType
 from metaflow.parameters import Parameter
-from datasets import DataFrameType
 
+from datasets import DataFrameType
 from datasets._typing import ColumnNames
 from datasets.context import Context
 from datasets.dataset_plugin import DatasetPlugin, StorageOptions
@@ -18,7 +18,7 @@ class _DatasetTypeClass(ParamType):
 
     def convert(self, value, param, ctx) -> DatasetPlugin:
         if isinstance(value, str):
-            params: _PydanticDatasetParameters = _PydanticDatasetParameters.parse_raw(value)
+            params: _DatasetParams = json.loads(value, cls=_DatasetParamsDecoder)
             params_dict = params.__dict__.copy()
             if "context" in params_dict:
                 del params_dict["context"]
@@ -35,35 +35,8 @@ class _DatasetTypeClass(ParamType):
         return "Dataset"
 
 
-class _OptionsDecoder(json.JSONDecoder):
-    def __init__(self, *args, **kwargs):
-        json.JSONDecoder.__init__(self, object_hook=self.object_hook, *args, **kwargs)
-
-    @staticmethod
-    def get_subclasses(cls: object) -> list[Type[StorageOptions]]:
-        all_subclasses: List[Type] = []
-
-        for subclass in cls.__subclasses__():
-            all_subclasses.append(subclass)
-            all_subclasses.extend(_OptionsDecoder.get_subclasses(subclass))
-
-        return all_subclasses
-
-    def object_hook(self, obj):
-        type = obj.get("type")
-        if type is None:
-            return obj
-
-        del obj["type"]  # Delete the `type` key as it isn't used in the models
-
-        mapping: Dict[str, Type[StorageOptions]] = {
-            f.__name__.lower(): f for f in _OptionsDecoder.get_subclasses(StorageOptions)
-        }
-
-        return mapping[type.lower()].parse_obj(obj)
-
-
-class _PydanticDatasetParameters(pydantic.BaseModel):
+@dataclass
+class _DatasetParams:
     name: Optional[str] = None
     logical_key: Optional[str] = None
     columns: Optional[ColumnNames] = None
@@ -74,12 +47,65 @@ class _PydanticDatasetParameters(pydantic.BaseModel):
     options_by_context: Optional[Dict[Union[Context, str], StorageOptions]] = None
     context: Optional[Union[Context, str]] = None
 
-    class Config:
-        def options_encoder(obj):
-            return dict(type=type(obj).__name__, **obj.dict())
+    def to_json(self) -> dict:
+        ret = dataclasses.asdict(self, dict_factory=lambda x: {k: v for (k, v) in x if v is not None})
 
-        json_encoders = {StorageOptions: options_encoder}
-        json_loads = functools.partial(json.loads, cls=_OptionsDecoder)
+        if self.options:
+            ret["options"] = self.options.to_json()
+
+        if self.options_by_context:
+            ret["options_by_context"] = {str(k): v.to_json() for k, v in self.options_by_context.items()}
+
+        return ret
+
+
+class _DatasetParamsDecoder(json.JSONDecoder):
+    def __init__(self, *args, **kwargs):
+        json.JSONDecoder.__init__(self, object_hook=self.object_hook, *args, **kwargs)
+
+    @staticmethod
+    def get_storage_subclasses(cls: object) -> list[Type[StorageOptions]]:
+        ret: List[Type] = []
+
+        for subclass in cls.__subclasses__():
+            ret.append(subclass)
+            ret.extend(_DatasetParamsDecoder.get_storage_subclasses(subclass))
+
+        return ret
+
+    def object_hook(self, obj: dict) -> Union[_DatasetParams, StorageOptions]:
+        type = obj.get("type")
+        if type:
+            # remove "type"
+            del obj["type"]
+
+            mapping: Dict[str, Type[StorageOptions]] = {
+                f.__name__.lower(): f for f in _DatasetParamsDecoder.get_storage_subclasses(StorageOptions)
+            }
+
+            return mapping[type.lower()](**obj)
+        elif (
+            "options" not in obj
+            and len(obj.keys())
+            and all(isinstance(v, StorageOptions) for v in obj.values())
+        ):
+            return {DatasetPlugin._get_context(k): v for k, v in obj.items()}
+        else:
+            mode = obj.get("mode")
+            if mode:
+                obj["mode"] = mode if isinstance(obj, Mode) else Mode[mode]
+
+            return _DatasetParams(**obj)
+
+
+_fallback = json.JSONEncoder().default
+
+
+def to_json_encoder(self, obj):
+    return getattr(obj.__class__, "to_json", _fallback)(obj)
+
+
+json.JSONEncoder.default = to_json_encoder
 
 
 class DatasetParameter(Parameter, DatasetPlugin):

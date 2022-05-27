@@ -1,5 +1,6 @@
 import logging
 import os
+from dataclasses import dataclass
 from pathlib import Path
 from typing import (
     TYPE_CHECKING,
@@ -11,10 +12,10 @@ from typing import (
     Union,
 )
 
-from datasets.mode import Mode
 from datasets._typing import ColumnNames, DataFrameType
 from datasets.dataset_plugin import DatasetPlugin, StorageOptions
 from datasets.exceptions import InvalidOperationException
+from datasets.mode import Mode
 from datasets.utils.case_utils import pascal_to_snake_case
 
 
@@ -25,6 +26,7 @@ if TYPE_CHECKING:
     from pyspark.sql import SparkSession
 
 
+@dataclass
 class BatchOptions(StorageOptions):
     partition_by: Optional[ColumnNames] = None
     path: Optional[Union[str, Path]] = None

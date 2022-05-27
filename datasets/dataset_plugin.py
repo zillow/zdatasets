@@ -1,14 +1,14 @@
 from __future__ import annotations
-from abc import ABC, abstractmethod
 
+import dataclasses
 import logging
+from abc import ABC, abstractmethod
+from dataclasses import dataclass
 from typing import Callable, Dict, Iterable, Optional, Tuple, Type, Union
 
-import pydantic
-
+from datasets._typing import ColumnNames, DataFrameType
 from datasets.context import Context
 from datasets.utils.case_utils import is_upper_pascal_case
-from datasets._typing import ColumnNames, DataFrameType
 
 from .mode import Mode
 from .program_executor import ProgramExecutor
@@ -18,8 +18,12 @@ _logger = logging.getLogger(__name__)
 _logger.setLevel(logging.DEBUG)
 
 
-class StorageOptions(pydantic.BaseModel):
-    _type: Optional[str] = None
+@dataclass
+class StorageOptions:
+    def to_json(self) -> dict:
+        ret = dataclasses.asdict(self, dict_factory=lambda x: {k: v for (k, v) in x if v is not None})
+        ret["type"] = type(self).__name__
+        return ret
 
 
 DatasetPluginFactory = Callable[
