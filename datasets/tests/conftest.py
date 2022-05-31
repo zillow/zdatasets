@@ -7,7 +7,7 @@ from pathlib import Path
 import pytest
 from pyspark.sql import SparkSession
 
-from datasets.context import Context
+from datasets import Context
 from datasets.dataset_plugin import DatasetPlugin
 from datasets.program_executor import ProgramExecutor
 

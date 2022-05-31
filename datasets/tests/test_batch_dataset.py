@@ -8,10 +8,9 @@ from pandas._testing import assert_frame_equal
 from pyspark import pandas as ps
 from pyspark.sql import DataFrame as SparkDataFrame
 
-from datasets import Mode
-from datasets.context import Context
-from datasets.dataset_plugin import DatasetPlugin
+from datasets import Dataset, Mode
 from datasets.exceptions import InvalidOperationException
+from datasets.plugins.batch.batch_base_plugin import BatchOptions
 from datasets.plugins.batch.batch_dataset import BatchDataset
 from datasets.tests.conftest import TestExecutor
 
@@ -41,13 +40,14 @@ def name() -> str:
 
 @pytest.fixture
 def dataset(name: str, path: str, partition_by: str, mode: Mode):
-    return DatasetPlugin.from_keys(
-        context=Context.BATCH,
+    return Dataset(
         name=name,
         logical_key="my_key",
-        path=path,
-        partition_by=partition_by,
         mode=mode,
+        options=BatchOptions(
+            partition_by=partition_by,
+            path=path,
+        ),
     )
 
 
@@ -61,7 +61,7 @@ def df() -> pd.DataFrame:
     return pd.DataFrame(data)
 
 
-def test_from_keys_offline_plugin(dataset: BatchDataset, path: str):
+def test_dataset_factory_batch_plugin(dataset: BatchDataset, path: str):
     assert dataset.name == "Ds1"
     assert dataset.hive_table_name == "ds_1"
     assert dataset.key == "my_key"

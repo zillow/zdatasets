@@ -1,18 +1,19 @@
 import pandas as pd
-from metaflow import FlowSpec, Parameter, step
+from metaflow import FlowSpec, step
 
-from datasets import DatasetType, Mode
-from datasets.plugins import BatchDataset
+from datasets import Dataset, Mode
+from datasets.metaflow import DatasetParameter
+from datasets.plugins import BatchOptions
 
 
 # Can also invoke from CLI:
 #  > python datasets/tutorials/0_hello_dataset_flow.py run \
-#    --hello_dataset '{"name": "HelloDataset", "partition_by": "region", "mode": "READ_WRITE"}'
+#    --hello_dataset '{"name": "HelloDataset", "mode": "READ_WRITE", \
+#    "options": {"type": "BatchOptions", "partition_by": "region"}}'
 class HelloDatasetFlow(FlowSpec):
-    hello_dataset: BatchDataset = Parameter(
+    hello_dataset = DatasetParameter(
         "hello_dataset",
-        default=dict(name="HelloDataset", partition_by="region", mode=Mode.READ_WRITE),
-        type=DatasetType,
+        default=Dataset("HelloDataset", mode=Mode.READ_WRITE, options=BatchOptions(partition_by="region")),
     )
 
     @step
@@ -21,7 +22,6 @@ class HelloDatasetFlow(FlowSpec):
         print("saving data_frame: \n", df.to_string(index=False))
 
         # Example of writing to a dataset
-        print(f"{self.hello_dataset.program_name=}")
         self.hello_dataset.write(df)
 
         # save this as an output dataset

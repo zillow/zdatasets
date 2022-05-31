@@ -1,5 +1,7 @@
 import logging
 import os
+from dataclasses import dataclass
+from pathlib import Path
 from typing import (
     TYPE_CHECKING,
     Callable,
@@ -10,10 +12,10 @@ from typing import (
     Union,
 )
 
-from datasets import Mode
 from datasets._typing import ColumnNames, DataFrameType
-from datasets.dataset_plugin import DatasetPlugin
+from datasets.dataset_plugin import DatasetPlugin, StorageOptions
 from datasets.exceptions import InvalidOperationException
+from datasets.mode import Mode
 from datasets.utils.case_utils import pascal_to_snake_case
 
 
@@ -22,6 +24,13 @@ _logger = logging.getLogger(__name__)
 if TYPE_CHECKING:
     from pyspark import SparkConf
     from pyspark.sql import SparkSession
+
+
+@dataclass
+class BatchOptions(StorageOptions):
+    partition_by: Optional[ColumnNames] = None
+    path: Optional[Union[str, Path]] = None
+    hive_table_name: Optional[str] = None
 
 
 class BatchBasePlugin(DatasetPlugin, dict):
@@ -39,12 +48,18 @@ class BatchBasePlugin(DatasetPlugin, dict):
         run_id: Optional[str] = None,
         run_time: Optional[int] = None,
         mode: Union[Mode, str] = Mode.READ,
-        partition_by: Optional[ColumnNames] = None,
-        hive_table_name: Optional[str] = None,
+        options: Optional[BatchOptions] = None,
     ):
-        self.hive_table_name = hive_table_name if hive_table_name else pascal_to_snake_case(name)
-        self.partition_by = partition_by
-        self.program_name = self._executor.current_program_name
+        self.program_name: Optional[str] = None
+        self.hive_table_name = None
+        self.partition_by = None
+        if options and isinstance(options, BatchOptions):
+            self.hive_table_name = options.hive_table_name
+            self.partition_by = options.partition_by
+
+        if self.hive_table_name is None:
+            self.hive_table_name = pascal_to_snake_case(name)
+
         self._path: Optional[str] = None
         super(BatchBasePlugin, self).__init__(
             name=name,
@@ -53,6 +68,7 @@ class BatchBasePlugin(DatasetPlugin, dict):
             run_id=run_id,
             run_time=run_time,
             mode=mode,
+            options=options,
         )
 
         def set_name(key: str, value: Optional[object]):
@@ -64,7 +80,8 @@ class BatchBasePlugin(DatasetPlugin, dict):
         set_name("columns", columns)
         set_name("run_id", run_id)
         set_name("run_time", run_time)
-        set_name("partition_by", partition_by)
+        set_name("partition_by", self.partition_by)
+        set_name("options", self.options)
 
     def _get_filters_columns(
         self,
@@ -157,10 +174,13 @@ class BatchBasePlugin(DatasetPlugin, dict):
         if BatchBasePlugin._dataset_path_func:
             return BatchBasePlugin._dataset_path_func(self)
 
+        if self.program_name is None:
+            self.program_name = self._executor.current_program_name
+
         path = os.path.join(
             self._executor.datastore_path,
             "datastore",
-            (self.program_name if self.program_name else self._executor.current_program_name),
+            self.program_name,
             self.hive_table_name,
         )
         return path

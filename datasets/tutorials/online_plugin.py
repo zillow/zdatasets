@@ -1,17 +1,25 @@
 # The default online plugin!
+from dataclasses import dataclass
 from typing import List, Optional, Union
 
 import pandas as pd
 
-from datasets import DatasetPlugin, Mode
 from datasets.context import Context
+from datasets.dataset_plugin import DatasetPlugin, StorageOptions
 
 
-@DatasetPlugin.register(constructor_keys={"name"}, context=Context.ONLINE)
+@dataclass
+class OnlineOptions(StorageOptions):
+    keys: Optional[str] = None
+
+
+@DatasetPlugin.register(context=Context.ONLINE, options_type=OnlineOptions, as_default_context_plugin=True)
 class DefaultOnlineDatasetPlugin(DatasetPlugin):
-    def __init__(self, keys: Optional[Union[List[str], str]] = None, **kwargs):
-        if isinstance(keys, str):
-            self.keys = keys.split(",")
+    def __init__(
+        self, keys: Optional[Union[List[str], str]] = None, options: Optional[OnlineOptions] = None, **kwargs
+    ):
+        if options and options.keys:
+            self.keys = options.keys.split(",")
         else:
             self.keys = keys
 
@@ -37,8 +45,6 @@ class DefaultOnlineDatasetPlugin(DatasetPlugin):
         return df
 
     def write(self, data: pd.DataFrame):
-        if not (self.mode & Mode.WRITE):
-            raise ValueError(f"Cannot write because mode={self.mode}")
         new_db = pd.merge(self._db, data, on="key", how="outer")
         new_db["value"] = new_db["value_y"].fillna(new_db["value_x"]).astype("int")
 

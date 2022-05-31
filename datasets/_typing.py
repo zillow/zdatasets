@@ -1,13 +1,16 @@
-from typing import TYPE_CHECKING, Iterable, Union
+from typing import TYPE_CHECKING, List, Union
 
-import pandas as pd
+import pandas
 
 
 if TYPE_CHECKING:
     # flake8: noqa: F401
-    from pyspark import SparkConf, pandas as ps
-    from pyspark.sql import DataFrame as SparkDataFrame, SparkSession
+    import dask.dataframe as dd
+    from pyspark import pandas as ps
+    from pyspark.sql import DataFrame as SparkDataFrame
 
 
-ColumnNames = Union[str, Iterable[str]]
-DataFrameType = Union[pd.DataFrame, "dd.DataFrame", "SparkDataFrame"]  # flake8: noqa: F821
+ColumnNames = Union[str, List[str]]
+DataFrameType = Union[
+    pandas.DataFrame, "dd.DataFrame", "ps.DataFrame", "SparkDataFrame"
+]  # flake8: noqa: F821
