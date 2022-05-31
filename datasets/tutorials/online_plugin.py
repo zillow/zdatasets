@@ -1,12 +1,14 @@
 # The default online plugin!
+from dataclasses import dataclass
 from typing import List, Optional, Union
 
 import pandas as pd
 
-from datasets.dataset_plugin import DatasetPlugin, StorageOptions
 from datasets.context import Context
+from datasets.dataset_plugin import DatasetPlugin, StorageOptions
 
 
+@dataclass
 class OnlineOptions(StorageOptions):
     keys: Optional[str] = None
 
