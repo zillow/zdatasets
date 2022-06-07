@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "zdatasets"
-version = "0.0.11"
+version = "0.1.1"
 description = "Dataset SDK for consistent read/write [batch, online, streaming] data."
 classifiers = [
   "Development Status :: 2 - Pre-Alpha",
@@ -26,7 +26,7 @@ hive_dataset = "datasets.plugins:HiveDataset"
 metaflow_executor = "datasets.plugins:MetaflowExecutor"
 
 [tool.poetry.dependencies]
-python = ">=3.9,<3.11"
+python = ">=3.9.0,<3.11"
 pandas = ">=1.4.0"
 pyarrow = ">=6.0.0"
 dask = { version = ">=2021.9.1", optional = true }

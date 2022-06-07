@@ -4,7 +4,7 @@ import pandas as pd  # type: ignore
 from metaflow import FlowSpec, step
 
 from datasets import Mode, dataset
-from datasets.plugins import BatchDataset
+from datasets.plugins import BatchDataset, BatchOptions
 
 
 flow_dir = os.path.dirname(os.path.realpath(__file__))
@@ -19,8 +19,10 @@ class ForeachDatasetFlow(FlowSpec):
 
     @dataset(
         name="MyDataset",
-        path=my_dataset_foreach_path,
-        partition_by="region,run_id",
+        options=BatchOptions(
+            partition_by="region,run_id",
+            path=my_dataset_foreach_path,
+        ),
         mode=Mode.READ_WRITE,
     )
     @step
@@ -39,7 +41,7 @@ class ForeachDatasetFlow(FlowSpec):
 
     @step
     def join_step(self, inputs):
-        self.merge_artifacts(inputs, include=["my_dataset"])
+        self.my_dataset = inputs[0].my_dataset
         self.next(self.end)
 
     @step

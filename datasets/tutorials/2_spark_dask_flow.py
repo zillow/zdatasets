@@ -2,10 +2,13 @@ from dask.dataframe import DataFrame
 from metaflow import FlowSpec, step
 
 from datasets import dataset
+from datasets.plugins import FlowOptions
 
 
 class SparkDaskFlow(FlowSpec):
-    @dataset(flow_dataset="InputOutputDatasetFlow.output_dataset", field_name="io_dataset")
+    @dataset(
+        field_name="io_dataset", options=FlowOptions(flow_dataset="InputOutputDatasetFlow.output_dataset")
+    )
     @step
     def start(self):
         print(f"I have dataset \n{self.io_dataset=}")
