@@ -144,7 +144,8 @@ def test_dataset_json_constructor():
     assert isinstance(dataset, DatasetPluginTest2)
 
     dataset = _DatasetTypeClass().convert(
-        '{"name": "TestFee", "context":"ONLINE", "options":{"type": "FeeOnlineDatasetOptions", "test_fee": "TestFee"}}',
+        '{"name": "TestFee", "context":"ONLINE",'
+        ' "options":{"type": "FeeOnlineDatasetOptions", "test_fee": "TestFee"}}',
         None,
         None,
     )

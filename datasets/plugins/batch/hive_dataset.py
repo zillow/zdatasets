@@ -112,7 +112,8 @@ class HiveDataset(BatchBasePlugin):
         spark: SparkSession = BatchBasePlugin._get_spark_builder(conf).enableHiveSupport().getOrCreate()
 
         _logger.info(
-            f"to_spark({self.hive_table_name=},{read_columns=},{partitions=},{run_id=},{run_time=},{filters=})"
+            f"to_spark({self.hive_table_name=},"
+            f"{read_columns=},{partitions=},{run_id=},{run_time=},{filters=})"
         )
         df: DataFrame = spark.read.options(**kwargs).table(self.hive_table_name).select(*read_columns)
 
