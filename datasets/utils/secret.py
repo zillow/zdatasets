@@ -8,7 +8,12 @@ from typing import Any, Dict, Optional, Union
 import boto3
 from botocore.exceptions import ClientError
 from kubernetes import client, config
-from tenacity import retry, retry_if_exception, stop_after_attempt, wait_fixed
+from tenacity import (
+    Retrying,
+    retry_if_exception,
+    stop_after_attempt,
+    wait_fixed,
+)
 
 
 logger = logging.getLogger(__name__)
@@ -80,7 +85,9 @@ class Secret:
         config.load_incluster_config()
         core_api = client.CoreV1Api()
         namespace = get_current_namespace()
-        secret_value = core_api.read_namespaced_secret(self.cluster_secret_name, namespace).data
+        for attempt in Retrying(stop=stop_after_attempt(3), wait=wait_fixed(5), reraise=True):
+            with attempt:
+                secret_value = core_api.read_namespaced_secret(self.cluster_secret_name, namespace).data
         for k, v in secret_value.items():
             secret_value[k] = base64.b64decode(v)
         return secret_value.get(self.key) if self.key is not None else secret_value
@@ -91,7 +98,19 @@ class Secret:
             secrets_manager_client = boto3.Session(region_name=os.getenv("AWS_REGION", "us-west-2")).client(
                 "secretsmanager"
             )
-            get_secret_value_response = _get_aws_secret_value(self.aws_secret_arn, secrets_manager_client)
+
+            for attempt in Retrying(
+                retry=retry_if_exception(
+                    lambda e: e.response["Error"]["Code"] == "InternalServiceErrorException"
+                ),
+                stop=stop_after_attempt(3),
+                wait=wait_fixed(5),
+                reraise=True,
+            ):
+                with attempt:
+                    get_secret_value_response = secrets_manager_client.get_secret_value(
+                        SecretId=self.aws_secret_arn
+                    )
         except ClientError as e:
             error_code = e.response["Error"]["Code"]
             if error_code == "DecryptionFailureException":
@@ -115,19 +134,10 @@ class Secret:
     def _try_decode_with_json(self, secret_value) -> secret_return_type:
         try:
             decoded_secret_value = json.loads(secret_value)
-            return decoded_secret_value.get(self.key) if self.key is not None else self.decoded_secret_value
+            return decoded_secret_value.get(self.key) if self.key is not None else decoded_secret_value
         except json.decoder.JSONDecodeError:
             # env var value is not json compatible, return raw string instead
             return secret_value
-
-
-def _retry_if_aws_error(exception: ClientError) -> bool:
-    return exception.response["Error"]["Code"] == "InternalServiceErrorException"
-
-
-@retry(retry=retry_if_exception(_retry_if_aws_error), stop=stop_after_attempt(3), wait=wait_fixed(2))
-def _get_aws_secret_value(secret_name, client) -> Dict[str, Any]:
-    return client.get_secret_value(SecretId=secret_name)
 
 
 def get_current_namespace() -> str:
