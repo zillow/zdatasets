@@ -35,6 +35,8 @@ importlib-metadata = ">=4.8.1"
 click = ">=7.0,<8.1"
 s3fs = ">=2022.1.0"
 awswrangler = ">=2.12.0"
+tenacity = ">=5.0"
+kubernetes = ">=12.0.0"
 
 [tool.poetry.dev-dependencies]
 mypy = ">=0.910"
