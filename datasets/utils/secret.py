@@ -45,7 +45,7 @@ class Secret:
     Optional variables:
         key: if secret source contains multiple secrets as a dict,
              return secret[key] if provided, otherwise return full secret
-        force_reload: ignore cached secret (if exists) and force reload from    source
+        force_reload: ignore cached secret (if exists) and force reload from source
 
     Interface requirement:
         A "value" property to return the actual secret value,
