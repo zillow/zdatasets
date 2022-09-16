@@ -7,7 +7,7 @@ import boto3
 import pytest
 from moto import mock_secretsmanager
 
-from datasets.utils.secret import Secret
+from datasets.utils.secret import Secret, get_current_namespace
 
 
 case = unittest.TestCase()
@@ -17,6 +17,20 @@ def test_secret_value_formatter():
     assert Secret._secret_value_formatter({"example": 1}) == {"example": "1"}
     assert Secret._secret_value_formatter("1") == "1"
     assert Secret._secret_value_formatter(1) == "1"
+
+
+def test_try_decode_with_json():
+    assert Secret()._try_decode_with_json('{"key": "value"}') == {"key": "value"}
+    assert Secret(key="key")._try_decode_with_json('{"key": "value"}') == "value"
+    with pytest.raises(KeyError):
+        Secret(key="wrong_key")._try_decode_with_json('{"key": "value"}')
+    assert Secret()._try_decode_with_json('"example_value"') == "example_value"
+    with pytest.raises(TypeError):
+        Secret(key="key")._try_decode_with_json('"example_value"')
+    with pytest.raises(ValueError):
+        Secret(key="key")._try_decode_with_json("example_value")
+    with pytest.raises(ValueError):
+        Secret()._try_decode_with_json(1)
 
 
 def test_fetch_raw_secret():
@@ -40,6 +54,9 @@ def test_fetch_env_secret_json_decodable_str():
     with pytest.raises(TypeError):
         Secret(env_var="EXAMPLE_SECRET", key="key").value
 
+    with pytest.raises(ValueError):
+        Secret(env_var="NON_EXISTENT_ENV_VAR").value
+
 
 @mock.patch.dict(os.environ, {"EXAMPLE_SECRET": "example_value"})
 def test_fetch_env_secret_not_json_decodable():
@@ -56,6 +73,7 @@ def test_fetch_aws_secret():
     conn.create_secret(Name="json-decodable-dict", SecretString='{"key": "value"}')
     conn.create_secret(Name="json-decodable-str", SecretString='"example_value"')
     conn.create_secret(Name="not-json-decodable", SecretString="example_value")
+    conn.create_secret(Name="empty", SecretString="")
 
     # Json decodable dict
     assert Secret(aws_secret_arn="json-decodable-dict").value == {"key": "value"}
@@ -83,6 +101,10 @@ def test_fetch_aws_secret():
     assert Secret(aws_secret_arn="not-json-decodable").value == "example_value"
     with pytest.raises(ValueError):
         Secret(aws_secret_arn="not-json-decodable", key="key").value
+
+    # Empty string
+    with pytest.raises(ValueError):
+        Secret(aws_secret_arn="empty").value
 
 
 @mock.patch("datasets.utils.secret.get_current_namespace")
@@ -123,3 +145,13 @@ def test_variable_validation():
 
     with pytest.raises(ValueError):
         Secret(raw_secret={"key": "value"}, key=1).value
+
+
+def test_get_current_namespace():
+    with mock.patch("os.path.exists", return_value=True):
+        with mock.patch("builtins.open", mock.mock_open(read_data="test_namespace")):
+            assert get_current_namespace() == "test_namespace"
+
+    with mock.patch("os.path.exists", return_value=False):
+        with pytest.raises(RuntimeError):
+            assert get_current_namespace()
