@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 
 # Ensure we return a non-None value
 # Prefer to throw exception rather than returning None if secret can't be found
-secret_return_type = Union[str, Dict[str, str]]
+SECRET_RETURN_TYPE = Union[str, Dict[str, str]]
 
 # Global secret cache to prevent redundant
 # secret retrieval calls to external system if possible
@@ -28,17 +28,20 @@ secret_cache = defaultdict(dict)
 
 
 @dataclass
-class Secret:
+class SecretFetcher:
     """
     Dataclass interface for secret retrieval.
 
-    Need to provide exact one of the following secret source variable:
-        cluster_secret_name: name of cluster secret.
-            secret value to be pulled from cluster secret
-        aws_secret_arn: name or arn of aws secret manager secret
+    Please provide one and only one of the following secret source variable:
+        kubernetes_secret_name: name of kubernetes namespaced secret,
+            in the same namespace as where this fetcher runs.
+            (extra "kubernetes" needs to be installed)
+            secret value to be pulled from k8s namespaced secret
+        aws_secret_arn: secret name or full arn of aws secret manager secret
+            use full arn for cross AWS account secret retrieval
             secret value to be pulled from aws secret manager through boto3
         env_var: env var name containing the secret value
-            secret value to be pulled from env var
+            secret value to be pulled from OS env var
         raw_secret: raw secret value
             secret value to be pulled directly through the variable
 
@@ -52,17 +55,17 @@ class Secret:
         either as a str (for single secret value) or a Dict[str, str] (for a group of secrets)
     """
 
-    cluster_secret_name: str = None
+    kubernetes_secret_name: str = None
     aws_secret_arn: str = None
     env_var: str = None
-    raw_secret: secret_return_type = None
+    raw_secret: SECRET_RETURN_TYPE = None
 
     key: str = None
 
     force_reload: bool = False
 
     @property
-    def value(self) -> secret_return_type:
+    def value(self) -> SECRET_RETURN_TYPE:
         """
         Returns:
             if key is not None: key field value of secret
@@ -70,7 +73,7 @@ class Secret:
         """
         self._variable_validation()
 
-        if self.cluster_secret_name:
+        if self.kubernetes_secret_name:
             return self._fetch_cluster_secret()
         if self.aws_secret_arn:
             return self._fetch_aws_secret()
@@ -84,7 +87,7 @@ class Secret:
         Ensure exact one secret source variable provided.
         Ensure key is of str type if provided
         """
-        secret_source_variables = ["cluster_secret_name", "aws_secret_arn", "env_var", "raw_secret"]
+        secret_source_variables = ["kubernetes_secret_name", "aws_secret_arn", "env_var", "raw_secret"]
 
         secret_source_variable_used = [
             getattr(self, variable) is not None for variable in secret_source_variables
@@ -96,12 +99,12 @@ class Secret:
         if self.key is not None and not isinstance(self.key, str):
             raise ValueError("key should be an string!")
 
-    def _fetch_cluster_secret(self) -> secret_return_type:
+    def _fetch_cluster_secret(self) -> SECRET_RETURN_TYPE:
         # Try to fetch from cache first
         global secret_cache
-        secret_from_cache = secret_cache["cluster_secret"].get(self.cluster_secret_name)
+        secret_from_cache = secret_cache["cluster_secret"].get(self.kubernetes_secret_name)
         if secret_from_cache is not None and not self.force_reload:
-            logger.info(f"Using secret from cache {self.cluster_secret_name}")
+            logger.info(f"Using secret from cache {self.kubernetes_secret_name}")
             secret_value = secret_from_cache
         else:
             config.load_incluster_config()
@@ -110,7 +113,7 @@ class Secret:
             for attempt in Retrying(stop=stop_after_attempt(3), wait=wait_fixed(5), reraise=True):
                 with attempt:
                     raw_secret_value = core_api.read_namespaced_secret(
-                        self.cluster_secret_name, namespace
+                        self.kubernetes_secret_name, namespace
                     ).data
 
             # Ensure we convert to Dict[str, str] type
@@ -118,11 +121,11 @@ class Secret:
             for k, v in raw_secret_value.items():
                 # The last decode("utf-8") converts bytes type to str
                 secret_value[str(k)] = base64.b64decode(v).decode("utf-8")
-            secret_cache["cluster_secret"][self.cluster_secret_name] = secret_value
+            secret_cache["cluster_secret"][self.kubernetes_secret_name] = secret_value
 
         return secret_value[self.key] if self.key is not None else secret_value
 
-    def _fetch_aws_secret(self) -> secret_return_type:
+    def _fetch_aws_secret(self) -> SECRET_RETURN_TYPE:
         global secret_cache
         secret_from_cache = secret_cache["aws_secret"].get(self.aws_secret_arn)
         if secret_from_cache is not None and not self.force_reload:
@@ -155,17 +158,17 @@ class Secret:
 
         return self._try_decode_with_json(secret_value)
 
-    def _fetch_env_secret(self) -> secret_return_type:
+    def _fetch_env_secret(self) -> SECRET_RETURN_TYPE:
         env_value = os.getenv(self.env_var)
         if env_value is None:
             raise ValueError(f"Env var {self.env_var} does not exist!")
         return self._try_decode_with_json(env_value)
 
-    def _fetch_raw_secret(self) -> secret_return_type:
+    def _fetch_raw_secret(self) -> SECRET_RETURN_TYPE:
         self.raw_secret = self._secret_value_formatter(self.raw_secret)
         return self.raw_secret[self.key] if self.key is not None else self.raw_secret
 
-    def _try_decode_with_json(self, secret_value: str) -> secret_return_type:
+    def _try_decode_with_json(self, secret_value: str) -> SECRET_RETURN_TYPE:
         if not isinstance(secret_value, str):
             raise ValueError(f"input secret_value should be an string! Getting {type(secret_value)} instead!")
 
@@ -180,7 +183,7 @@ class Secret:
             return secret_value
 
     @staticmethod
-    def _secret_value_formatter(secret_value) -> secret_return_type:
+    def _secret_value_formatter(secret_value) -> SECRET_RETURN_TYPE:
         """
         Ensure secret is of type Union[str, Dict[str, str]]
         """
