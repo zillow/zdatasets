@@ -1,13 +1,14 @@
 import base64
+import importlib
 import json
 import logging
 import os
 from collections import defaultdict
 from dataclasses import dataclass
+from types import ModuleType
 from typing import Dict, Union
 
 import boto3
-from kubernetes import client, config
 from tenacity import (
     Retrying,
     retry_if_exception,
@@ -17,6 +18,7 @@ from tenacity import (
 
 
 logger = logging.getLogger(__name__)
+
 
 # Ensure we return a non-None value
 # Prefer to throw exception rather than returning None if secret can't be found
@@ -49,6 +51,8 @@ class SecretFetcher:
         key: if secret source contains multiple secrets as a dict,
              return secret[key] if provided, otherwise return full secret
         force_reload: ignore cached secret (if exists) and force reload from source
+        num_retries: number of retries if pulling secret from external system
+        wait_seconds_between_retries: seconds to wait between retries (if any)
 
     Interface requirement:
         A "value" property to return the actual secret value,
@@ -63,27 +67,14 @@ class SecretFetcher:
     key: str = None
 
     force_reload: bool = False
+    num_retries: int = 3
+    wait_seconds_between_retries: int = 5
 
-    @property
-    def value(self) -> SECRET_RETURN_TYPE:
+    def __post_init__(self):
         """
-        Returns:
-            if key is not None: key field value of secret
-            if key is None: entire secret
-        """
-        self._variable_validation()
+        post init function of dataclass
+        https://docs.python.org/3/library/dataclasses.html#post-init-processing
 
-        if self.kubernetes_secret_name:
-            return self._fetch_cluster_secret()
-        if self.aws_secret_arn:
-            return self._fetch_aws_secret()
-        if self.env_var:
-            return self._fetch_env_secret()
-        if self.raw_secret:
-            return self._fetch_raw_secret()
-
-    def _variable_validation(self):
-        """
         Ensure exact one secret source variable provided.
         Ensure key is of str type if provided
         """
@@ -99,18 +90,39 @@ class SecretFetcher:
         if self.key is not None and not isinstance(self.key, str):
             raise ValueError("key should be an string!")
 
-    def _fetch_cluster_secret(self) -> SECRET_RETURN_TYPE:
+    @property
+    def value(self) -> SECRET_RETURN_TYPE:
+        """
+        Returns:
+            if key is not None: key field value of secret
+            if key is None: entire secret
+        """
+        if self.kubernetes_secret_name:
+            return self._fetch_kubernetes_secret()
+        if self.aws_secret_arn:
+            return self._fetch_aws_secretsmanager()
+        if self.env_var:
+            return self._fetch_env_secret()
+        if self.raw_secret:
+            return self._fetch_raw_secret()
+
+    def _fetch_kubernetes_secret(self) -> SECRET_RETURN_TYPE:
+        kubernetes = try_import_kubernetes()
         # Try to fetch from cache first
         global secret_cache
-        secret_from_cache = secret_cache["cluster_secret"].get(self.kubernetes_secret_name)
+        secret_from_cache = secret_cache["kubernetes_secret"].get(self.kubernetes_secret_name)
         if secret_from_cache is not None and not self.force_reload:
             logger.info(f"Using secret from cache {self.kubernetes_secret_name}")
             secret_value = secret_from_cache
         else:
-            config.load_incluster_config()
-            core_api = client.CoreV1Api()
+            kubernetes.config.load_incluster_config()
+            core_api = kubernetes.client.CoreV1Api()
             namespace = get_current_namespace()
-            for attempt in Retrying(stop=stop_after_attempt(3), wait=wait_fixed(5), reraise=True):
+            for attempt in Retrying(
+                stop=stop_after_attempt(self.num_retries),
+                wait=wait_fixed(self.wait_seconds_between_retries),
+                reraise=True,
+            ):
                 with attempt:
                     raw_secret_value = core_api.read_namespaced_secret(
                         self.kubernetes_secret_name, namespace
@@ -121,11 +133,11 @@ class SecretFetcher:
             for k, v in raw_secret_value.items():
                 # The last decode("utf-8") converts bytes type to str
                 secret_value[str(k)] = base64.b64decode(v).decode("utf-8")
-            secret_cache["cluster_secret"][self.kubernetes_secret_name] = secret_value
+            secret_cache["kubernetes_secret"][self.kubernetes_secret_name] = secret_value
 
         return secret_value[self.key] if self.key is not None else secret_value
 
-    def _fetch_aws_secret(self) -> SECRET_RETURN_TYPE:
+    def _fetch_aws_secretsmanager(self) -> SECRET_RETURN_TYPE:
         global secret_cache
         secret_from_cache = secret_cache["aws_secret"].get(self.aws_secret_arn)
         if secret_from_cache is not None and not self.force_reload:
@@ -141,8 +153,8 @@ class SecretFetcher:
                 retry=retry_if_exception(
                     lambda e: e.response["Error"]["Code"] == "InternalServiceErrorException"
                 ),
-                stop=stop_after_attempt(3),
-                wait=wait_fixed(5),
+                stop=stop_after_attempt(self.num_retries),
+                wait=wait_fixed(self.wait_seconds_between_retries),
                 reraise=True,
             ):
                 with attempt:
@@ -211,3 +223,19 @@ def get_current_namespace() -> str:
         namespace = f.readline().strip()
     logger.info(f"Current namespace: {namespace}")
     return namespace
+
+
+def try_import_kubernetes() -> ModuleType:
+    """
+    Try to import the optional kubernetes module
+
+    Separating out as a function to facilitate test (mock)
+    """
+    try:
+        return importlib.import_module("kubernetes")
+    except ImportError:
+        logger.info(
+            "Please install optional kubernetes to fetch kubernetes secret,"
+            ' e.g., `poetry add "zdatasets[kubernetes,other_optionals]"`'
+        )
+        raise

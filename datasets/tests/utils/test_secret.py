@@ -7,7 +7,11 @@ import boto3
 import pytest
 from moto import mock_secretsmanager
 
-from datasets.utils.secret import SecretFetcher, get_current_namespace
+from datasets.utils.secret import (
+    SecretFetcher,
+    get_current_namespace,
+    try_import_kubernetes,
+)
 
 
 case = unittest.TestCase()
@@ -20,17 +24,17 @@ def test_secret_value_formatter():
 
 
 def test_try_decode_with_json():
-    assert SecretFetcher()._try_decode_with_json('{"key": "value"}') == {"key": "value"}
-    assert SecretFetcher(key="key")._try_decode_with_json('{"key": "value"}') == "value"
+    assert SecretFetcher(env_var="DUMMY")._try_decode_with_json('{"key": "value"}') == {"key": "value"}
+    assert SecretFetcher(env_var="DUMMY", key="key")._try_decode_with_json('{"key": "value"}') == "value"
     with pytest.raises(KeyError):
-        SecretFetcher(key="wrong_key")._try_decode_with_json('{"key": "value"}')
-    assert SecretFetcher()._try_decode_with_json('"example_value"') == "example_value"
+        SecretFetcher(env_var="DUMMY", key="wrong_key")._try_decode_with_json('{"key": "value"}')
+    assert SecretFetcher(env_var="DUMMY")._try_decode_with_json('"example_value"') == "example_value"
     with pytest.raises(TypeError):
-        SecretFetcher(key="key")._try_decode_with_json('"example_value"')
+        SecretFetcher(env_var="DUMMY", key="key")._try_decode_with_json('"example_value"')
     with pytest.raises(ValueError):
-        SecretFetcher(key="key")._try_decode_with_json("example_value")
+        SecretFetcher(env_var="DUMMY", key="key")._try_decode_with_json("example_value")
     with pytest.raises(ValueError):
-        SecretFetcher()._try_decode_with_json(1)
+        SecretFetcher(env_var="DUMMY")._try_decode_with_json(1)
 
 
 def test_fetch_raw_secret():
@@ -110,32 +114,35 @@ def test_fetch_aws_secret():
 
 
 @mock.patch("datasets.utils.secret.get_current_namespace")
-@mock.patch("datasets.utils.secret.config")
-@mock.patch("datasets.utils.secret.client")
-def test_fetch_cluster_secret(client, config, namespace):
+@mock.patch("datasets.utils.secret.try_import_kubernetes")
+def test_fetch_kubernetes_secret(kubernetes, namespace):
     from datasets.utils.secret import logger, secret_cache
 
-    example_cluster_secret = {
+    example_kubernetes_secret = {
         "key": base64.b64encode(b"value"),
     }
 
-    example_new_cluster_secret = {
+    example_new_kubernetes_secret = {
         "key": base64.b64encode(b"new_value"),
     }
 
-    client.CoreV1Api.return_value.read_namespaced_secret.return_value.data = example_cluster_secret
+    kubernetes.return_value.client.CoreV1Api.return_value.read_namespaced_secret.return_value.data = (
+        example_kubernetes_secret
+    )
     assert SecretFetcher(kubernetes_secret_name="test").value == {"key": "value"}
     # Test secret is cached
-    assert secret_cache["cluster_secret"]["test"] == {"key": "value"}
+    assert secret_cache["kubernetes_secret"]["test"] == {"key": "value"}
     # Test secret fetched from cache
-    client.CoreV1Api.return_value.read_namespaced_secret.return_value.data = example_new_cluster_secret
+    kubernetes.return_value.client.CoreV1Api.return_value.read_namespaced_secret.return_value.data = (
+        example_new_kubernetes_secret
+    )
     with case.assertLogs(logger=logger, level="INFO") as cm:
         assert SecretFetcher(kubernetes_secret_name="test", key="key").value == "value"
     assert any("Using secret from cache test" in log for log in cm.output)
     # Test force_reload
     assert SecretFetcher(kubernetes_secret_name="test", key="key", force_reload=True).value == "new_value"
     # Test cache updated after force_reload
-    assert secret_cache["cluster_secret"]["test"] == {"key": "new_value"}
+    assert secret_cache["kubernetes_secret"]["test"] == {"key": "new_value"}
 
     with pytest.raises(KeyError):
         SecretFetcher(kubernetes_secret_name="test", key="wrong_key").value
@@ -143,10 +150,10 @@ def test_fetch_cluster_secret(client, config, namespace):
 
 def test_variable_validation():
     with pytest.raises(ValueError):
-        SecretFetcher(env_var="TEST_ENV_VAR", raw_secret={"key": "value"}).value
+        SecretFetcher(env_var="TEST_ENV_VAR", raw_secret={"key": "value"})
 
     with pytest.raises(ValueError):
-        SecretFetcher(raw_secret={"key": "value"}, key=1).value
+        SecretFetcher(raw_secret={"key": "value"}, key=1)
 
 
 def test_get_current_namespace():
@@ -157,3 +164,12 @@ def test_get_current_namespace():
     with mock.patch("os.path.exists", return_value=False):
         with pytest.raises(RuntimeError):
             assert get_current_namespace()
+
+
+def test_try_import_kubernetes():
+    with mock.patch.dict("sys.modules", {"kubernetes": None}):
+        with pytest.raises(ImportError):
+            try_import_kubernetes()
+
+    with mock.patch.dict("sys.modules", {"kubernetes": mock.MagicMock()}):
+        assert isinstance(try_import_kubernetes(), mock.MagicMock)
