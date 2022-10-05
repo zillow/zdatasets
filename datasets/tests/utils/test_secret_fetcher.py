@@ -113,8 +113,8 @@ def test_fetch_aws_secret():
         SecretFetcher(aws_secret_arn="empty").value
 
 
-@mock.patch("datasets.utils.secret.get_current_namespace")
-@mock.patch("datasets.utils.secret.try_import_kubernetes")
+@mock.patch("datasets.utils.secret_fetcher.get_current_namespace")
+@mock.patch("datasets.utils.secret_fetcher.try_import_kubernetes")
 def test_fetch_kubernetes_secret(kubernetes, namespace):
     from datasets.utils.secret_fetcher import logger, secret_cache
 
