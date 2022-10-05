@@ -7,7 +7,7 @@ import boto3
 import pytest
 from moto import mock_secretsmanager
 
-from datasets.utils.secret import (
+from datasets.utils.secret_fetcher import (
     SecretFetcher,
     get_current_namespace,
     try_import_kubernetes,
@@ -71,7 +71,7 @@ def test_fetch_env_secret_not_json_decodable():
 
 @mock_secretsmanager
 def test_fetch_aws_secret():
-    from datasets.utils.secret import logger, secret_cache
+    from datasets.utils.secret_fetcher import logger, secret_cache
 
     conn = boto3.client("secretsmanager", region_name="us-west-2")
     conn.create_secret(Name="json-decodable-dict", SecretString='{"key": "value"}')
@@ -116,7 +116,7 @@ def test_fetch_aws_secret():
 @mock.patch("datasets.utils.secret.get_current_namespace")
 @mock.patch("datasets.utils.secret.try_import_kubernetes")
 def test_fetch_kubernetes_secret(kubernetes, namespace):
-    from datasets.utils.secret import logger, secret_cache
+    from datasets.utils.secret_fetcher import logger, secret_cache
 
     example_kubernetes_secret = {
         "key": base64.b64encode(b"value"),
