@@ -13,4 +13,6 @@ from datasets.plugins.batch.hive_dataset import HiveDataset
 
 from datasets._typing import ColumnNames, DataFrameType
 
+from datasets.utils import SecretFetcher
+
 Dataset = DatasetPlugin.factory

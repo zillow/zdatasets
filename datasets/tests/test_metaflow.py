@@ -60,7 +60,8 @@ def test_dataset_parameters_decoder():
     assert params.mode == Mode.READ
 
     params = json.loads(
-        '{"name": "hi", "options":{"type":"HiveOptions", "path":"/p", "partition_by": "a,b", "hive_table_name": "n"}}',
+        '{"name": "hi", "options":{"type":"HiveOptions",'
+        ' "path":"/p", "partition_by": "a,b", "hive_table_name": "n"}}',
         cls=_DatasetParamsDecoder,
     )
     assert params.options == HiveOptions(path="/p", partition_by="a,b", hive_table_name="n")

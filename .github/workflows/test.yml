@@ -50,7 +50,7 @@ jobs:
     - name: Install Dependencies
       if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
       run: |
-        poetry install -E dask -E spark
+        poetry install -E dask -E spark -E kubernetes
         poetry run pip install --upgrade git+https://github.com/zillow/metaflow.git@feature/kfp
 
     - name: Code Quality Check
