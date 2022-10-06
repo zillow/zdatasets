@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "zdatasets"
-version = "0.2.0"
+version = "0.2.1"
 description = "Dataset SDK for consistent read/write [batch, online, streaming] data."
 classifiers = [
   "Development Status :: 2 - Pre-Alpha",
@@ -34,7 +34,6 @@ pyspark = { version = "^3.2.0", optional = true }
 importlib-metadata = ">=4.8.1"
 click = ">=7.0,<8.1"
 s3fs = ">=2022.1.0"
-awswrangler = ">=2.12.0"
 tenacity = ">=5.0"
 kubernetes = { version = ">=12.0.0", optional = true }
 
