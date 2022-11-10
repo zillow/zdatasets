@@ -14,7 +14,7 @@ from datasets.tests.conftest import TestExecutor
 from datasets.utils.secret_fetcher import SecretFetcher
 
 
-# We'll need to inherit dict too to make this class Json serializable
+# We'll need to inherit dict too to make this class json serializable
 class _TestPlugin(DatasetPlugin, dict):
     def __init__(
         self,
