@@ -1,18 +1,36 @@
 from dataclasses import dataclass
-from typing import Optional
+from typing import Optional, Union
 
 import pandas as pd
 import pytest
 
-from datasets import Context, DataFrameType, Dataset
+from datasets import Context, DataFrameType, Dataset, Mode
+from datasets._typing import ColumnNames
 from datasets.dataset_plugin import DatasetPlugin, StorageOptions
 from datasets.metaflow import _DatasetTypeClass
 from datasets.plugins import HiveDataset
 from datasets.plugins.batch.hive_dataset import HiveOptions
 from datasets.tests.conftest import TestExecutor
+from datasets.utils.secret_fetcher import SecretFetcher
 
 
-class _TestPlugin(DatasetPlugin):
+# We'll need to inherit dict too to make this class Json serializable
+class _TestPlugin(DatasetPlugin, dict):
+    def __init__(
+        self,
+        name: str,
+        logical_key: Optional[str] = None,
+        columns: Optional[ColumnNames] = None,
+        run_id: Optional[str] = None,
+        run_time: Optional[int] = None,
+        mode: Union[Mode, str] = Mode.READ,
+        options: Optional[StorageOptions] = None,
+    ):
+        super().__init__(name, logical_key, columns, run_id, run_time, mode, options)
+
+        # Init the dict to have fields included for json.dumps
+        dict.__init__(self, name=name, mode=mode.name, options=options)
+
     def write(self, data: DataFrameType, **kwargs):
         raise NotImplementedError()
 
@@ -83,6 +101,21 @@ class FeeOnlineDatasetPluginTest(_TestPlugin):
         super(FeeOnlineDatasetPluginTest, self).__init__(name=name, options=options, **kwargs)
 
 
+@dataclass
+class SecretDatasetTestOptions(StorageOptions):
+    a: Optional[str] = None
+    secret: Optional[SecretFetcher] = SecretFetcher(env_var="test1")
+
+
+@DatasetPlugin.register(context=Context.BATCH, options_type=SecretDatasetTestOptions)
+class SecretDatasetPluginTest(_TestPlugin):
+    def __init__(
+        self, name: str, options: SecretDatasetTestOptions, mode: Union[Mode, str] = Mode.READ, **kwargs
+    ):
+        self.secret = options.secret
+        super(SecretDatasetPluginTest, self).__init__(name=name, options=options, mode=mode, **kwargs)
+
+
 def test_dataset_factory_latency():
     import datetime
 
@@ -122,6 +155,18 @@ def test_dataset_factory_constructor():
     assert dataset.test_fee == "TestFee"
     assert isinstance(dataset, FeeOnlineDatasetPluginTest)
 
+    dataset = Dataset("TestSecret", options=SecretDatasetTestOptions(a="Ta"))
+    assert dataset.name == "TestSecret"
+    assert dataset.secret.env_var == "test1"
+    assert isinstance(dataset, SecretDatasetPluginTest)
+
+    dataset = Dataset(
+        "TestSecret", options=SecretDatasetTestOptions(a="Ta", secret=SecretFetcher(env_var="test2"))
+    )
+    assert dataset.name == "TestSecret"
+    assert dataset.secret.env_var == "test2"
+    assert isinstance(dataset, SecretDatasetPluginTest)
+
 
 def test_dataset_json_constructor():
     dataset = _DatasetTypeClass().convert('{"name": "FooName"}', None, None)
@@ -152,6 +197,26 @@ def test_dataset_json_constructor():
     assert dataset.name == "TestFee"
     assert dataset.test_fee == "TestFee"
     assert isinstance(dataset, FeeOnlineDatasetPluginTest)
+
+    dataset = _DatasetTypeClass().convert(
+        '{"name": "TestSecret", "options":{"type": "SecretDatasetTestOptions", "a": "Ta"}}',
+        None,
+        None,
+    )
+    assert dataset.name == "TestSecret"
+    assert dataset.secret.env_var == "test1"
+    assert isinstance(dataset, SecretDatasetPluginTest)
+
+    dataset = _DatasetTypeClass().convert(
+        '{"name": "TestSecret",'
+        ' "options":{"type": "SecretDatasetTestOptions",'
+        ' "a": "Ta", "secret": {"type": "SecretFetcher", "env_var": "test2"}}}',
+        None,
+        None,
+    )
+    assert dataset.name == "TestSecret"
+    assert dataset.secret.env_var == "test2"
+    assert isinstance(dataset, SecretDatasetPluginTest)
 
 
 def test_dataset_factory_constructor_unhappy():

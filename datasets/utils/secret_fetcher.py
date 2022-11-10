@@ -1,4 +1,5 @@
 import base64
+import dataclasses
 import importlib
 import json
 import logging
@@ -105,6 +106,11 @@ class SecretFetcher:
             return self._fetch_env_secret()
         if self.raw_secret:
             return self._fetch_raw_secret()
+
+    def to_json(self) -> dict:
+        ret = dataclasses.asdict(self, dict_factory=lambda x: {k: v for (k, v) in x if v is not None})
+        ret["type"] = type(self).__name__
+        return ret
 
     def _fetch_kubernetes_secret(self) -> SECRET_RETURN_TYPE:
         kubernetes = try_import_kubernetes()

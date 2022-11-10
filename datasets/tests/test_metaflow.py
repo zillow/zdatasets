@@ -12,6 +12,11 @@ from datasets.mode import Mode
 from datasets.plugins.batch.batch_base_plugin import BatchOptions
 from datasets.plugins.batch.batch_dataset import BatchDataset
 from datasets.plugins.batch.hive_dataset import HiveOptions
+from datasets.tests.test_dataset_plugin import (
+    SecretDatasetPluginTest,
+    SecretDatasetTestOptions,
+)
+from datasets.utils.secret_fetcher import SecretFetcher
 
 
 def test_dataset_dumps_load():
@@ -28,6 +33,22 @@ def test_dataset_dumps_load():
     assert dataset2.options.partition_by == "foo"
     assert dataset2.mode == Mode.READ_WRITE
     assert isinstance(dataset2, BatchDataset)
+    assert dataset == dataset2
+
+
+def test_dataset_secret_dumps_load():
+    dataset = Dataset(
+        name="TestSecret",
+        mode=Mode.READ_WRITE,
+        options=SecretDatasetTestOptions(secret=SecretFetcher(env_var="test2")),
+    )
+
+    json_value = json.dumps(dataset)
+    dataset2 = _DatasetTypeClass().convert(json_value, None, None)
+
+    assert dataset2.secret.env_var == "test2"
+    assert dataset2.mode == Mode.READ_WRITE
+    assert isinstance(dataset2, SecretDatasetPluginTest)
     assert dataset == dataset2
 
 
