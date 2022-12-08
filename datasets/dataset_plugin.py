@@ -23,6 +23,13 @@ class StorageOptions:
     def to_json(self) -> dict:
         ret = dataclasses.asdict(self, dict_factory=lambda x: {k: v for (k, v) in x if v is not None})
         ret["type"] = type(self).__name__
+
+        # Overwrite for nested dataclass object e.g. SecretFetcher with to_json defined
+        for field in dataclasses.fields(self):
+            field_obj = getattr(self, field.name)
+            if getattr(field_obj, "to_json", None):
+                ret[field.name] = field_obj.to_json()
+
         return ret
 
 

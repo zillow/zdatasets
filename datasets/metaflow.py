@@ -11,6 +11,7 @@ from datasets._typing import ColumnNames
 from datasets.context import Context
 from datasets.dataset_plugin import DatasetPlugin, StorageOptions
 from datasets.mode import Mode
+from datasets.utils.secret_fetcher import SecretFetcher
 
 
 class _DatasetTypeClass(ParamType):
@@ -73,12 +74,17 @@ class _DatasetParamsDecoder(json.JSONDecoder):
 
         return ret
 
-    def object_hook(self, obj: dict) -> Union[_DatasetParams, StorageOptions]:
+    def object_hook(self, obj: dict) -> Union[_DatasetParams, StorageOptions, SecretFetcher]:
         type = obj.get("type")
         if type:
             # remove "type"
             del obj["type"]
 
+            # SecretFetcher type
+            if type == "SecretFetcher":
+                return SecretFetcher(**obj)
+
+            # StorageOptions type
             mapping: Dict[str, Type[StorageOptions]] = {
                 f.__name__.lower(): f for f in _DatasetParamsDecoder.get_storage_subclasses(StorageOptions)
             }
