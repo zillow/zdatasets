@@ -197,7 +197,7 @@ html_theme_path = [sphinx_rtd_theme.get_html_theme_path()]
 # html_search_scorer = 'scorer.js'
 
 # Output file base name for HTML help builder.
-htmlhelp_basename = "datasets-daldoc"
+htmlhelp_basename = "zdatasets-daldoc"
 
 # -- Options for LaTeX output ---------------------------------------------
 
@@ -215,7 +215,7 @@ latex_elements = {
 # Grouping the document tree into LaTeX files. List of tuples
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
-latex_documents = [("index", "datasets.tex", "datasets Documentation", "aiplat@zillow.com", "manual")]
+latex_documents = [("index", "zdatasets.tex", "zdatasets Documentation", "aiplat@zillow.com", "manual")]
 
 # The name of an image file (relative to this directory) to place at the top of
 # the title page.
@@ -242,7 +242,7 @@ latex_documents = [("index", "datasets.tex", "datasets Documentation", "aiplat@z
 
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
-man_pages = [("index", "datasets", "datasets Documentation", ["aiplat@zillow.com"], 1)]
+man_pages = [("index", "zdatasets", "zdatasets Documentation", ["aiplat@zillow.com"], 1)]
 
 # If true, show URL addresses after external links.
 # man_show_urls = False
@@ -256,10 +256,10 @@ man_pages = [("index", "datasets", "datasets Documentation", ["aiplat@zillow.com
 texinfo_documents = [
     (
         "index",
-        "datasets",
-        "datasets Documentation",
+        "zdatasets",
+        "zdatasets Documentation",
         "",
-        "datasets",
+        "zdatasets",
         "One line description of project.",
         "Miscellaneous",
     )

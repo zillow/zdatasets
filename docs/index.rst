@@ -1,8 +1,8 @@
-.. datasets documentation master file
+.. zdatasets documentation master file
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Welcome to datasets
+Welcome to zdatasets
 ==================================================
 
 TODO
@@ -11,8 +11,8 @@ TODO
     import pandas as pd
     from metaflow import FlowSpec, step
 
-    from datasets.datasets_decorator import datasets
-    from datasets.mode import Mode
+    from zdatasets.datasets_decorator import datasets
+    from zdatasets.mode import Mode
 
 
     class HelloDatasetFlow(FlowSpec):

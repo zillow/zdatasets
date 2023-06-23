@@ -25,4 +25,4 @@ repos:
       entry: pytest
       pass_filenames: false
       stages: [commit]
-      args: [datasets]
+      args: [zdatasets]

@@ -55,12 +55,12 @@ jobs:
 
     - name: Code Quality Check
       run: |
-        poetry run black datasets --check
-        poetry run flake8 datasets
+        poetry run black zdatasets --check
+        poetry run flake8 zdatasets
 
     - name: Execute Python tests
       run: |
-        poetry run pytest datasets
+        poetry run pytest zdatasets
         pip install coverage==6.1.2
         coveragepy-lcov
 
