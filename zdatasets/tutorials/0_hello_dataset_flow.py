@@ -1,14 +1,3 @@
-![Tests](https://github.com/zillow/datasets/actions/workflows/test.yml/badge.svg)
-[![Coverage Status](https://coveralls.io/repos/github/zillow/datasets/badge.svg)](https://coveralls.io/github/zillow/datasets)
-[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/zillow/datasets/main?urlpath=lab/tree/datasets/tutorials)
-
-
-# Welcome to zdatasets
-==================================================
-
-TODO
-
-```python
 import pandas as pd
 from metaflow import FlowSpec, step
 
@@ -52,5 +41,3 @@ class HelloDatasetFlow(FlowSpec):
 
 if __name__ == "__main__":
     HelloDatasetFlow()
-
-```

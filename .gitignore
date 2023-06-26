@@ -20,7 +20,7 @@ eggs/
 parts/
 /share/
 /etc/
-datasets.egg-info/
+zdatasets.egg-info/
 .extends-cache
 GENERATED_VERSION
 versioner-*
@@ -91,7 +91,7 @@ man
 
 pip-selfcheck.json
 metastore_db/*
-datasets/tutorials/data/*
-datasets/tests/data/datastore/*
-datasets/tests/data/ds1/*
-datasets/tests/data/pandas.csv
+zdatasets/tutorials/data/*
+zdatasets/tests/data/datastore/*
+zdatasets/tests/data/ds1/*
+zdatasets/tests/data/pandas.csv

@@ -4,11 +4,11 @@
 
 ## Running Tests
 
-    poetry run pytest datasets
+    poetry run pytest zdatasets
 
 ### Run Single Test
 
-    poetry run pytest datasets -k search_item (e.g., name of test)
+    poetry run pytest zdatasets -k search_item (e.g., name of test)
    
        
 ### Pre-commit

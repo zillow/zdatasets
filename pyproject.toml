@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "zdatasets"
-version = "0.2.5"
+version = "1.2.5"
 description = "Dataset SDK for consistent read/write [batch, online, streaming] data."
 classifiers = [
   "Development Status :: 2 - Pre-Alpha",
@@ -13,17 +13,17 @@ authors = ["Taleb Zeghmi"]
 readme = "README.md"
 
 [[tool.poetry.packages]]
-include = "datasets"
+include = "zdatasets"
 
 # https://packaging.python.org/guides/creating-and-discovering-plugins/
 [tool.poetry.plugins]
-[tool.poetry.plugins."datasets.plugins"]
-batch_dataset = "datasets.plugins:BatchDataset"
-flow_dataset = "datasets.plugins:FlowDataset"
-hive_dataset = "datasets.plugins:HiveDataset"
+[tool.poetry.plugins."zdatasets.plugins"]
+batch_dataset = "zdatasets.plugins:BatchDataset"
+flow_dataset = "zdatasets.plugins:FlowDataset"
+hive_dataset = "zdatasets.plugins:HiveDataset"
 
-[tool.poetry.plugins."datasets.executors"]
-metaflow_executor = "datasets.plugins:MetaflowExecutor"
+[tool.poetry.plugins."zdatasets.executors"]
+metaflow_executor = "zdatasets.plugins:MetaflowExecutor"
 
 [tool.poetry.dependencies]
 python = ">=3.8.0,<4"
@@ -57,8 +57,8 @@ spark = ["pyspark"]
 kubernetes = ["kubernetes"]
 
 [tool.isort]
-known_first_party = 'datasets'
-known_third_party = ["datasets", "numpy", "orbital_core", "pandas"]
+known_first_party = 'zdatasets'
+known_third_party = ["zdatasets", "numpy", "orbital_core", "pandas"]
 multi_line_output = 3
 lines_after_imports = 2
 force_grid_wrap = 0
