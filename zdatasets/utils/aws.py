@@ -61,37 +61,39 @@ def get_aws_client(role_arn: str, service: str):
 
 
 def send_sqs_message(
-        queue_url: str,
-        message_body: str,
-        *,  # keyword-only parameters
-        role_arn: str = None,
-        profile_name: str = None) -> None:
+    queue_url: str,
+    message_body: str,
+    *,  # keyword-only parameters
+    role_arn: str = None,
+    profile_name: str = None,
+) -> None:
     """
-        :param queue_url: the url of SQS to write messages to, i.e.'https://sqs.<region>.amazonaws.com/<account_id>/<queue_name>'
-        :param message_body: i.e.  ‘{"date_key": "2023-01-01", "accuracy_threshold": 0.5}'
-        :param role_arn: optional
-        :param profile_name: optional, mainly for testing/debugging purposes
-        :return: None
-        Exceptions:
-            botocore.exceptions.ClientError  # no permissions to assume role or to SendMessage to SQS
-            AWS.SimpleQueueService.NonExistentQueue
-            SQS.Client.exceptions.InvalidMessageContents
-            SQS.Client.exceptions.UnsupportedOperation
+    Args:
+        queue_url: the url of SQS to write messages to,
+            i.e.'https://sqs.<region>.amazonaws.com/<account_id>/<queue_name>'
+        message_body: i.e.  ‘{"date_key": "2023-01-01", "accuracy_threshold": 0.5}'
+        role_arn: optional
+        profile_name: optional, mainly for testing/debugging purposes
+    Returns: None
+    Exceptions:
+        botocore.exceptions.ClientError  # no permissions to assume role or to SendMessage to SQS
+        AWS.SimpleQueueService.NonExistentQueue
+        SQS.Client.exceptions.InvalidMessageContents
+        SQS.Client.exceptions.UnsupportedOperation
     """
     # Create session from given iam role and/or aws profile
     session = get_aws_session(role_arn, profile_name)
 
     # Create an SQS client from the session
-    sqs = session.client('sqs')
+    sqs = session.client("sqs")
 
     # Send message to SQS queue
     try:
-        response = sqs.send_message(
-            QueueUrl=queue_url,
-            MessageBody=message_body
-        )
+        response = sqs.send_message(QueueUrl=queue_url, MessageBody=message_body)
 
-        _logger.debug(f"Successfully sent the message {message_body} to sqs {queue_url} with MessageId {response['MessageId']}")
+        _logger.debug(
+            f"Successfully sent the message {message_body} to sqs {queue_url} with MessageId {response['MessageId']}"
+        )
     except Exception as err:
         _logger.error(f"Failed to send the message {message_body} to sqs {queue_url}")
         raise err
