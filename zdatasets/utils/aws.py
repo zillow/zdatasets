@@ -92,7 +92,8 @@ def send_sqs_message(
         response = sqs.send_message(QueueUrl=queue_url, MessageBody=message_body)
 
         _logger.debug(
-            f"Successfully sent the message {message_body} to sqs {queue_url} with MessageId {response['MessageId']}"
+            f"Successfully sent the message {message_body} "
+            f"to sqs {queue_url} with MessageId {response['MessageId']}"
         )
     except Exception as err:
         _logger.error(f"Failed to send the message {message_body} to sqs {queue_url}")
