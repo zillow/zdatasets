@@ -2,9 +2,9 @@ channels:
 - conda-forge
 dependencies:
   - openjdk=8
-  - notebook=6.4.5
-  - python=3.9.7
-  - pyspark=3.2.0
-  - dask=2021.9.1
-  - pandas=1.1.5
-  - numpy=1.21.1
+  - notebook=6.5.4
+  - python=3.9.13
+  - pyspark=3.2.2
+  - dask=2023.7.0
+  - pandas=1.5.3
+  - numpy=1.24.4
