@@ -2,11 +2,10 @@ import base64
 import os
 import unittest
 from unittest import mock
-from botocore.exceptions import ClientError
-
 import boto3
 import pytest
 from moto import mock_aws  # https://github.com/getmoto/moto/blob/master/CHANGELOG.md#500
+from botocore.exceptions import ClientError
 
 from zdatasets.utils.secret_fetcher import (
     SecretFetcher,
@@ -111,11 +110,11 @@ def test_fetch_aws_secret():
 
     # Empty string
     with pytest.raises(ClientError) as ce:
-        SecretFetcher(aws_secret_arn="empty")
-    assert (
-        "Secrets Manager can't find the specified secret value for staging label: AWSCURRENT"
-        == ce.value.response["Error"]["Message"]
-    )
+        SecretFetcher(aws_secret_arn="empty").value
+        assert (
+                "Secrets Manager can't find the specified secret value for staging label: AWSCURRENT"
+                == ce.value.response["Error"]["Message"]
+        )
 
 
 @mock.patch("zdatasets.utils.secret_fetcher.get_current_namespace")
