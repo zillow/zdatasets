@@ -5,7 +5,7 @@ from unittest import mock
 
 import boto3
 import pytest
-from moto import mock_aws #https://github.com/getmoto/moto/blob/master/CHANGELOG.md#500
+from moto import mock_aws  # https://github.com/getmoto/moto/blob/master/CHANGELOG.md#500
 
 from zdatasets.utils.secret_fetcher import (
     SecretFetcher,

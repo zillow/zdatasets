@@ -2,7 +2,7 @@ from pathlib import Path
 from typing import List
 
 import pytest
-from moto import mock_aws #https://github.com/getmoto/moto/blob/master/CHANGELOG.md#500
+from moto import mock_aws  # https://github.com/getmoto/moto/blob/master/CHANGELOG.md#500
 
 from zdatasets.utils.aws import get_aws_client
 from zdatasets.utils.partitions import Partition, get_path_partitions
