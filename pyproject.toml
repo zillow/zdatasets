@@ -55,6 +55,7 @@ metaflow = ["zillow-metaflow"]
 dask = ["dask"]
 spark = ["pyspark"]
 kubernetes = ["kubernetes"]
+SecretFecther = ["SecretFecther"]
 
 [tool.isort]
 known_first_party = 'zdatasets'

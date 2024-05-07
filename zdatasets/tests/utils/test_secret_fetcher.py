@@ -2,10 +2,10 @@ import base64
 import os
 import unittest
 from unittest import mock
-
 import boto3
 import pytest
-from moto import mock_secretsmanager
+from moto import mock_aws  # https://github.com/getmoto/moto/blob/master/CHANGELOG.md#500
+from botocore.exceptions import ClientError
 
 from zdatasets.utils.secret_fetcher import (
     SecretFetcher,
@@ -69,7 +69,7 @@ def test_fetch_env_secret_not_json_decodable():
         SecretFetcher(env_var="EXAMPLE_SECRET", key="key").value
 
 
-@mock_secretsmanager
+@mock_aws
 def test_fetch_aws_secret():
     from zdatasets.utils.secret_fetcher import logger, secret_cache
 
@@ -77,7 +77,7 @@ def test_fetch_aws_secret():
     conn.create_secret(Name="json-decodable-dict", SecretString='{"key": "value"}')
     conn.create_secret(Name="json-decodable-str", SecretString='"example_value"')
     conn.create_secret(Name="not-json-decodable", SecretString="example_value")
-    conn.create_secret(Name="empty", SecretString="")
+    conn.create_secret(Name="empty")
 
     # Json decodable dict
     assert SecretFetcher(aws_secret_arn="json-decodable-dict").value == {"key": "value"}
@@ -109,8 +109,12 @@ def test_fetch_aws_secret():
         SecretFetcher(aws_secret_arn="not-json-decodable", key="key").value
 
     # Empty string
-    with pytest.raises(ValueError):
+    with pytest.raises(ClientError) as ce:
         SecretFetcher(aws_secret_arn="empty").value
+        assert (
+            "Secrets Manager can't find the specified secret value for staging label: AWSCURRENT"
+            == ce.value.response["Error"]["Message"]
+        )
 
 
 @mock.patch("zdatasets.utils.secret_fetcher.get_current_namespace")
