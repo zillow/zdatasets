@@ -113,8 +113,9 @@ def test_fetch_aws_secret():
     with pytest.raises(ClientError) as ce:
         SecretFetcher(aws_secret_arn="empty")
     assert (
-            "Secrets Manager can't find the specified secret value for staging label: AWSCURRENT"
-            == ce.value.response["Error"]["Message"])
+        "Secrets Manager can't find the specified secret value for staging label: AWSCURRENT"
+        == ce.value.response["Error"]["Message"]
+    )
 
 
 @mock.patch("zdatasets.utils.secret_fetcher.get_current_namespace")
