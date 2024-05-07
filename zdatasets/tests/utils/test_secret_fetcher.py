@@ -2,6 +2,7 @@ import base64
 import os
 import unittest
 from unittest import mock
+from botocore.exceptions import ClientError
 
 import boto3
 import pytest
@@ -109,11 +110,11 @@ def test_fetch_aws_secret():
         SecretFetcher(aws_secret_arn="not-json-decodable", key="key").value
 
     # Empty string
-    with pytest.raises(ValueError) as ve:
+    with pytest.raises(ClientError) as ce:
         SecretFetcher(aws_secret_arn="empty")
     assert (
             "Secrets Manager can't find the specified secret value for staging label: AWSCURRENT"
-            == ve.value.response["Error"]["Message"])
+            == ce.value.response["Error"]["Message"])
 
 
 @mock.patch("zdatasets.utils.secret_fetcher.get_current_namespace")
