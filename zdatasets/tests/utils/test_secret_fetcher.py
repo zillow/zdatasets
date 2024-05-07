@@ -77,7 +77,7 @@ def test_fetch_aws_secret():
     conn.create_secret(Name="json-decodable-dict", SecretString='{"key": "value"}')
     conn.create_secret(Name="json-decodable-str", SecretString='"example_value"')
     conn.create_secret(Name="not-json-decodable", SecretString="example_value")
-    conn.create_secret(Name="empty", SecretString="")
+    conn.create_secret(Name="empty")
 
     # Json decodable dict
     assert SecretFetcher(aws_secret_arn="json-decodable-dict").value == {"key": "value"}
