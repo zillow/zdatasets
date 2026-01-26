@@ -5,7 +5,7 @@ from unittest import mock
 
 import boto3
 import pytest
-from moto import mock_secretsmanager
+from moto import mock_aws
 
 from zdatasets.utils.secret_fetcher import (
     SecretFetcher,
@@ -69,7 +69,7 @@ def test_fetch_env_secret_not_json_decodable():
         SecretFetcher(env_var="EXAMPLE_SECRET", key="key").value
 
 
-@mock_secretsmanager
+@mock_aws
 def test_fetch_aws_secret():
     from zdatasets.utils.secret_fetcher import logger, secret_cache
 
