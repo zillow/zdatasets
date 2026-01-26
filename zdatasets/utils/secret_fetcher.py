@@ -115,7 +115,6 @@ class SecretFetcher:
     def _fetch_kubernetes_secret(self) -> SECRET_RETURN_TYPE:
         kubernetes = try_import_kubernetes()
         # Try to fetch from cache first
-        global secret_cache
         secret_from_cache = secret_cache["kubernetes_secret"].get(self.kubernetes_secret_name)
         if secret_from_cache is not None and not self.force_reload:
             logger.info(f"Using secret from cache {self.kubernetes_secret_name}")
@@ -144,7 +143,6 @@ class SecretFetcher:
         return secret_value[self.key] if self.key is not None else secret_value
 
     def _fetch_aws_secretsmanager(self) -> SECRET_RETURN_TYPE:
-        global secret_cache
         secret_from_cache = secret_cache["aws_secret"].get(self.aws_secret_arn)
         if secret_from_cache is not None and not self.force_reload:
             logger.info(f"Using secret from cache {self.aws_secret_arn}")
