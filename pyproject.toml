@@ -37,7 +37,7 @@ click = "^8"
 s3fs = ">=2025.7.0"
 tenacity = ">=8.1.0"
 kubernetes = { version = ">=32.0.0", optional = true }
-zillow-metaflow = { version = "^2.3.3325", optional = true }
+setuptools = { version = ">=65.0.0,<81", optional = true }
 
 [tool.poetry.group.dev.dependencies]
 mypy = "^0.982"
@@ -53,7 +53,7 @@ moto = {extras = ["s3", "secretsmanager"], version = ">=5.0.0"}
 
 [tool.poetry.extras]
 doc = ["sphinx", "sphinx_rtd_theme"]
-metaflow = ["zillow-metaflow"]
+metaflow = ["zillow-metaflow", "setuptools"]
 dask = ["dask"]
 spark = ["pyspark"]
 kubernetes = ["kubernetes"]
