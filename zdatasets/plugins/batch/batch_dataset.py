@@ -122,13 +122,17 @@ class BatchDataset(BatchBasePlugin):
         filters, read_columns = self._get_filters_columns(columns, run_id, run_time, partitions)
         self._path = self._get_dataset_path()
         _logger.info(f"to_dask({self._path=},{read_columns=},{partitions=},{run_id=},{run_time=},{filters=})")
+        
+        # Remove 'categories' from kwargs to avoid categorical metadata issues in Dask 2025+
+        read_kwargs = kwargs.copy()
+        read_kwargs.pop('categories', None)
+        
         return dd.read_parquet(
             self._path,
             columns=read_columns,
             filters=filters,
-            engine=kwargs.get("engine", "pyarrow"),
-            categories=None,
-            **kwargs,
+            engine=read_kwargs.get("engine", "pyarrow"),
+            **read_kwargs,
         )
 
     def to_spark(
