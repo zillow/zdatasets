@@ -127,6 +127,7 @@ class BatchDataset(BatchBasePlugin):
             columns=read_columns,
             filters=filters,
             engine=kwargs.get("engine", "pyarrow"),
+            categories=None,
             **kwargs,
         )
 
@@ -178,7 +179,7 @@ class BatchDataset(BatchBasePlugin):
             return self.write_spark_pandas(data, **kwargs)
         elif "pyspark.sql.dataframe.DataFrame" in str(type(data)):
             return self.write_spark(data, **kwargs)
-        elif "dask.dataframe.core.DataFrame" in str(type(data)):
+        elif "dask.dataframe" in str(type(data)) and "DataFrame" in str(type(data)):
             return self.write_dask(data, **kwargs)
         else:
             raise ValueError(
