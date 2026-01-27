@@ -123,9 +123,13 @@ class BatchDataset(BatchBasePlugin):
         self._path = self._get_dataset_path()
         _logger.info(f"to_dask({self._path=},{read_columns=},{partitions=},{run_id=},{run_time=},{filters=})")
 
-        # Remove 'categories' from kwargs to avoid categorical metadata issues in Dask 2025+
+        # Defensive settings for Dask 2025+ compatibility
         read_kwargs = kwargs.copy()
-        read_kwargs.pop("categories", None)
+        read_kwargs.pop("categories", None)  # Remove problematic categories parameter
+
+        # Set defaults that prevent categorical metadata issues
+        read_kwargs.setdefault("calculate_divisions", False)  # Skip division calculation
+        read_kwargs.setdefault("ignore_metadata_file", True)  # Ignore problematic _metadata files
 
         return dd.read_parquet(
             self._path,
