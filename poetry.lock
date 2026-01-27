@@ -2419,7 +2419,7 @@ files = [
 name = "setuptools"
 version = "79.0.1"
 description = "Easily download, build, install, upgrade, and uninstall Python packages"
-optional = true
+optional = false
 python-versions = ">=3.9"
 files = [
     {file = "setuptools-79.0.1-py3-none-any.whl", hash = "sha256:e147c0549f27767ba362f9da434eab9c5dc0045d5304feb602a0af001089fc51"},
@@ -2927,4 +2927,4 @@ spark = ["pyspark"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.10.0,<4"
-content-hash = "f8ba1539c8f0ecc51b64097825bc2831c7397e9f41ad5d1a82838e81c9541194"
+content-hash = "940c0a57e3eb55421ce3e9e9a1a2bf6072ab5f0254fbc59c3b3723a93b0f6ddf"
