@@ -782,17 +782,16 @@ test-randomorder = ["pytest-randomly"]
 
 [[package]]
 name = "dask"
-version = "2022.12.1"
+version = "2022.9.1"
 description = "Parallel PyData with Task Scheduling"
 optional = true
 python-versions = ">=3.8"
 files = [
-    {file = "dask-2022.12.1-py3-none-any.whl", hash = "sha256:a833ee774bf702c08d22f31412358d12b007df36c6e8c107f32f17a4b20f1f68"},
-    {file = "dask-2022.12.1.tar.gz", hash = "sha256:ef12c98a6681964494ddfee4ba8071ebc8895d3c4ea27f5c5160a14e29f01d92"},
+    {file = "dask-2022.9.1-py3-none-any.whl", hash = "sha256:bdb72c14cc497a069ad8cd9b3902b98bcc725f8f18ce4526c95177bde3fb1fdd"},
+    {file = "dask-2022.9.1.tar.gz", hash = "sha256:d2f94ed0db1e79eccee86422c91b5398ec8f515e328f132a8c55358478578221"},
 ]
 
 [package.dependencies]
-click = ">=7.0"
 cloudpickle = ">=1.1.1"
 fsspec = ">=0.6.0"
 packaging = ">=20.0"
@@ -802,10 +801,10 @@ toolz = ">=0.8.2"
 
 [package.extras]
 array = ["numpy (>=1.18)"]
-complete = ["bokeh (>=2.4.2,<3)", "distributed (==2022.12.1)", "jinja2", "numpy (>=1.18)", "pandas (>=1.0)"]
+complete = ["bokeh (>=2.4.2)", "distributed (==2022.9.1)", "jinja2", "numpy (>=1.18)", "pandas (>=1.0)"]
 dataframe = ["numpy (>=1.18)", "pandas (>=1.0)"]
-diagnostics = ["bokeh (>=2.4.2,<3)", "jinja2"]
-distributed = ["distributed (==2022.12.1)"]
+diagnostics = ["bokeh (>=2.4.2)", "jinja2"]
+distributed = ["distributed (==2022.9.1)"]
 test = ["pandas[test]", "pre-commit", "pytest", "pytest-rerunfailures", "pytest-xdist"]
 
 [[package]]
@@ -2926,4 +2925,4 @@ spark = ["pyspark"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.10.0,<4"
-content-hash = "79e17961503a89a973a32784e6b85c99e27884c9c68ad535501b1dd4488a86a5"
+content-hash = "f9aaa90fd45a0400a8e139bae02d997217c8f231de87eedebdf4a8eac2987cb5"
