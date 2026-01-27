@@ -782,30 +782,32 @@ test-randomorder = ["pytest-randomly"]
 
 [[package]]
 name = "dask"
-version = "2022.9.1"
+version = "2026.1.1"
 description = "Parallel PyData with Task Scheduling"
 optional = true
-python-versions = ">=3.8"
+python-versions = ">=3.10"
 files = [
-    {file = "dask-2022.9.1-py3-none-any.whl", hash = "sha256:bdb72c14cc497a069ad8cd9b3902b98bcc725f8f18ce4526c95177bde3fb1fdd"},
-    {file = "dask-2022.9.1.tar.gz", hash = "sha256:d2f94ed0db1e79eccee86422c91b5398ec8f515e328f132a8c55358478578221"},
+    {file = "dask-2026.1.1-py3-none-any.whl", hash = "sha256:146b0ef2918eb581e06139183a88801b4a8c52d7c37758a91f8c3b75c54b0e15"},
+    {file = "dask-2026.1.1.tar.gz", hash = "sha256:12b1dbb0d6e92f287feb4076871600b2fba3a843d35ff214776ada5e9e7a1529"},
 ]
 
 [package.dependencies]
-cloudpickle = ">=1.1.1"
-fsspec = ">=0.6.0"
+click = ">=8.1"
+cloudpickle = ">=3.0.0"
+fsspec = ">=2021.09.0"
+importlib_metadata = {version = ">=4.13.0", markers = "python_version < \"3.12\""}
 packaging = ">=20.0"
-partd = ">=0.3.10"
+partd = ">=1.4.0"
 pyyaml = ">=5.3.1"
-toolz = ">=0.8.2"
+toolz = ">=0.12.0"
 
 [package.extras]
-array = ["numpy (>=1.18)"]
-complete = ["bokeh (>=2.4.2)", "distributed (==2022.9.1)", "jinja2", "numpy (>=1.18)", "pandas (>=1.0)"]
-dataframe = ["numpy (>=1.18)", "pandas (>=1.0)"]
-diagnostics = ["bokeh (>=2.4.2)", "jinja2"]
-distributed = ["distributed (==2022.9.1)"]
-test = ["pandas[test]", "pre-commit", "pytest", "pytest-rerunfailures", "pytest-xdist"]
+array = ["numpy (>=1.24)"]
+complete = ["dask[array,dataframe,diagnostics,distributed]", "lz4 (>=4.3.2)", "pyarrow (>=14.0.1)"]
+dataframe = ["dask[array]", "pandas (>=2.0)", "pyarrow (>=14.0.1)"]
+diagnostics = ["bokeh (>=3.1.0)", "jinja2 (>=2.10.3)"]
+distributed = ["distributed (>=2026.1.1,<2026.1.2)"]
+test = ["pandas[test]", "pre-commit", "pytest", "pytest-cov", "pytest-mock", "pytest-rerunfailures", "pytest-timeout", "pytest-xdist"]
 
 [[package]]
 name = "distlib"
@@ -2925,4 +2927,4 @@ spark = ["pyspark"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.10.0,<4"
-content-hash = "f9aaa90fd45a0400a8e139bae02d997217c8f231de87eedebdf4a8eac2987cb5"
+content-hash = "3cac8a205ce02a23fe576f541324bfaed525ac8312f856985d723d9b55dc8ab5"

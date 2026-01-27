@@ -231,7 +231,13 @@ class BatchDataset(BatchBasePlugin):
         df, partition_cols = self._path_write_data_frame_prep(df, partition_by=partition_by)
         self._path = self._get_dataset_path()
         _logger.info(f"write_pandas({self._path=}, {partition_cols=})")
-        df.to_parquet(
+
+        # Convert any categorical columns to object type to avoid Dask read issues
+        df_to_write = df.copy()
+        for col in df_to_write.select_dtypes(["category"]).columns:
+            df_to_write[col] = df_to_write[col].astype(str)
+
+        df_to_write.to_parquet(
             self._path,
             engine=kwargs.get("engine", "pyarrow"),
             compression=kwargs.get("compression", "snappy"),
