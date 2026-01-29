@@ -4,10 +4,25 @@
 
 
 # Welcome to zdatasets
-==================================================
 
-TODO
+## Development
+* Set the version to a dev version, e.g. `1.3.0.dev1` in `pyproject.toml` when starting development.
+* Bump the dev version (e.g., 1.3.0.dev1 → 1.3.0.dev2) every time you have a change you want to test in other repositories.
+* After every change, confirm that the github workflow runs are successful at https://github.com/zillow/zdatasets/actions.
+* The dev versions are published in test PyPI at https://test.pypi.org/project/zdatasets/#history.
+* While testing your changes, you may need to reference your merge request in other repositories' `pyproject.toml` instead of using the dev version. For example, 
+```
+dataset = [
+  "zdatasets[kubernetes] @ git+https://github.com/zillow/zdatasets.git@refs/pull/42/head"
+]
+```
+* Bump the release version (e.g., 1.3.0.dev2 → 1.3.1) before merging your code change.
+* Confirm the release of the new version in PyPI at https://pypi.org/project/zdatasets/#history.
+* Create the release in https://github.com/zillow/zdatasets/releases.
+* For any authentication issues in publishing to PyPI, ask for help in [the #open-source slack channel](https://zillowgroup.enterprise.slack.com/archives/C4NC77QG4).
 
+
+## Example
 ```python
 import pandas as pd
 from metaflow import FlowSpec, step
