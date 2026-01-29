@@ -54,18 +54,7 @@ jobs:
       if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
       run: |
         poetry install -E dask -E spark -E kubernetes
-        poetry run pip install --upgrade git+https://github.com/zillow/metaflow.git@feature/kfp
-
-    - name: Verify setuptools installation
-      run: |
-        echo "=== Checking if setuptools is installed ==="
-        poetry run pip list | grep setuptools || echo "setuptools NOT found in pip list"
-        
-        echo "=== Checking setuptools version ==="
-        poetry run python -c "import setuptools; print(f'setuptools version: {setuptools.__version__}')" || echo "Failed to import setuptools"
-        
-        echo "=== Checking if pkg_resources is available ==="
-        poetry run python -c "import pkg_resources; print(f'pkg_resources available from: {pkg_resources.__file__}')" || echo "Failed to import pkg_resources"
+        poetry run pip install --upgrade git+https://github.com/zillow/metaflow.git@feature/aip
 
     - name: Code Quality Check
       run: |

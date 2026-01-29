@@ -2,7 +2,7 @@
 
 set -ex
 
-pip install --upgrade git+https://github.com/zillow/metaflow.git@feature/kfp
+pip install --upgrade git+https://github.com/zillow/metaflow.git@feature/aip
 
 pip install poetry
 
