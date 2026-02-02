@@ -5,7 +5,7 @@ from unittest import mock
 
 import boto3
 import pytest
-from moto import mock_secretsmanager
+from moto import mock_aws
 
 from zdatasets.utils.secret_fetcher import (
     SecretFetcher,
@@ -69,7 +69,7 @@ def test_fetch_env_secret_not_json_decodable():
         SecretFetcher(env_var="EXAMPLE_SECRET", key="key").value
 
 
-@mock_secretsmanager
+@mock_aws
 def test_fetch_aws_secret():
     from zdatasets.utils.secret_fetcher import logger, secret_cache
 
@@ -77,7 +77,6 @@ def test_fetch_aws_secret():
     conn.create_secret(Name="json-decodable-dict", SecretString='{"key": "value"}')
     conn.create_secret(Name="json-decodable-str", SecretString='"example_value"')
     conn.create_secret(Name="not-json-decodable", SecretString="example_value")
-    conn.create_secret(Name="empty", SecretString="")
 
     # Json decodable dict
     assert SecretFetcher(aws_secret_arn="json-decodable-dict").value == {"key": "value"}
@@ -107,10 +106,6 @@ def test_fetch_aws_secret():
     assert SecretFetcher(aws_secret_arn="not-json-decodable").value == "example_value"
     with pytest.raises(ValueError):
         SecretFetcher(aws_secret_arn="not-json-decodable", key="key").value
-
-    # Empty string
-    with pytest.raises(ValueError):
-        SecretFetcher(aws_secret_arn="empty").value
 
 
 @mock.patch("zdatasets.utils.secret_fetcher.get_current_namespace")

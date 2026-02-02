@@ -122,12 +122,21 @@ class BatchDataset(BatchBasePlugin):
         filters, read_columns = self._get_filters_columns(columns, run_id, run_time, partitions)
         self._path = self._get_dataset_path()
         _logger.info(f"to_dask({self._path=},{read_columns=},{partitions=},{run_id=},{run_time=},{filters=})")
+
+        # Defensive settings for Dask 2025+ compatibility
+        read_kwargs = kwargs.copy()
+        read_kwargs.pop("categories", None)  # Remove problematic categories parameter
+
+        # Set defaults that prevent categorical metadata issues
+        read_kwargs.setdefault("calculate_divisions", False)  # Skip division calculation
+        read_kwargs.setdefault("ignore_metadata_file", True)  # Ignore problematic _metadata files
+
         return dd.read_parquet(
             self._path,
             columns=read_columns,
             filters=filters,
-            engine=kwargs.get("engine", "pyarrow"),
-            **kwargs,
+            engine=read_kwargs.get("engine", "pyarrow"),
+            **read_kwargs,
         )
 
     def to_spark(
@@ -178,7 +187,7 @@ class BatchDataset(BatchBasePlugin):
             return self.write_spark_pandas(data, **kwargs)
         elif "pyspark.sql.dataframe.DataFrame" in str(type(data)):
             return self.write_spark(data, **kwargs)
-        elif "dask.dataframe.core.DataFrame" in str(type(data)):
+        elif "dask.dataframe" in str(type(data)) and "DataFrame" in str(type(data)):
             return self.write_dask(data, **kwargs)
         else:
             raise ValueError(
@@ -222,7 +231,13 @@ class BatchDataset(BatchBasePlugin):
         df, partition_cols = self._path_write_data_frame_prep(df, partition_by=partition_by)
         self._path = self._get_dataset_path()
         _logger.info(f"write_pandas({self._path=}, {partition_cols=})")
-        df.to_parquet(
+
+        # Convert any categorical columns to object type to avoid Dask read issues
+        df_to_write = df.copy()
+        for col in df_to_write.select_dtypes(["category"]).columns:
+            df_to_write[col] = df_to_write[col].astype(str)
+
+        df_to_write.to_parquet(
             self._path,
             engine=kwargs.get("engine", "pyarrow"),
             compression=kwargs.get("compression", "snappy"),

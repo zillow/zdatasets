@@ -22,10 +22,10 @@ jobs:
     steps:
     - uses: actions/checkout@v2
 
-    - name: Set up Python 3.9
+    - name: Set up Python 3.10
       uses: actions/setup-python@v2
       with:
-        python-version: '3.9'
+        python-version: '3.10'
 
     - name: Install Poetry
       run: |
@@ -35,8 +35,11 @@ jobs:
     - name: Configure poetry
       run: poetry config virtualenvs.in-project true
 
+    - name: Tell Poetry to use Python 3.10
+      run: poetry env use python3.10
+
     - name: Setup Cache Poetry virtualenv
-      uses: actions/cache@v1
+      uses: actions/cache@v4
       id: cached-poetry-dependencies
       with:
         path: .venv
@@ -51,7 +54,7 @@ jobs:
       if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
       run: |
         poetry install -E dask -E spark -E kubernetes
-        poetry run pip install --upgrade git+https://github.com/zillow/metaflow.git@feature/kfp
+        poetry run pip install --upgrade git+https://github.com/zillow/metaflow.git@feature/aip
 
     - name: Code Quality Check
       run: |
@@ -75,14 +78,16 @@ jobs:
         poetry build
 
     - name: Publish distribution to Test PyPI
-      uses: pypa/gh-action-pypi-publish@master
+      uses: pypa/gh-action-pypi-publish@release/v1
       with:
         password: ${{ secrets.TEST_PYPI_API_TOKEN }}
-        repository_url: https://test.pypi.org/legacy/
-        skip_existing: true
+        repository-url: https://test.pypi.org/legacy/
+        skip-existing: true
+        verbose: true
 
     - name: Publish distribution to PyPI
       if: github.event_name == 'release' && github.event.action == 'created'
-      uses: pypa/gh-action-pypi-publish@master
+      uses: pypa/gh-action-pypi-publish@release/v1
       with:
         password: ${{ secrets.PYPI_API_TOKEN }}
+        verbose: true

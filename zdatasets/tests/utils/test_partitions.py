@@ -2,7 +2,7 @@ from pathlib import Path
 from typing import List
 
 import pytest
-from moto import mock_s3, mock_sts
+from moto import mock_aws
 
 from zdatasets.utils.aws import get_aws_client
 from zdatasets.utils.partitions import Partition, get_path_partitions
@@ -46,8 +46,7 @@ def test_get_path_partitions_suffix(data_path: Path, assume_role: str):
 
 
 @pytest.mark.parametrize("assume_role", [None, "arn:aws:iam::333333333333:role/test-role"])
-@mock_sts
-@mock_s3
+@mock_aws
 def test_load_partitions_s3(assume_role: str, region_partitioned_paths: List[str]):
     bucket_name = "test-bucket"
     path = f"s3://{bucket_name}/data/models/"

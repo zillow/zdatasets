@@ -177,7 +177,8 @@ def test_write_on_read_only_pandas(dataset: BatchDataset):
 @pytest.mark.parametrize("name", ["DsDask"])
 def test_offline_plugin_dask(dataset: BatchDataset, df):
     data = dd.from_pandas(df, npartitions=1)
-    assert "dask.dataframe.core.DataFrame" in str(type(data))
+    # Support both old and new Dask DataFrame class paths
+    assert "dask.dataframe" in str(type(data)) and "DataFrame" in str(type(data))
     dataset.write(data)
     df = dataset.to_dask(columns="col1").compute()
     assert df.columns.to_list() == ["col1"]
